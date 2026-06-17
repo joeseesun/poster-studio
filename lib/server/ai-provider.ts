@@ -7,6 +7,7 @@ import {
   isAIAuthHeader,
   isBuiltInAIProvider,
   isAIProviderId,
+  isAIProviderModelId,
   isAIRequestFormat,
 } from '@/lib/ai-provider-config';
 
@@ -53,8 +54,13 @@ export function resolveAIProviderConfig(body: AIProviderRequestBody): ResolvedAI
         preset.endpoint
     )
   );
+  const requestedModelId = clean(body.modelId);
+  if (useBuiltInProvider && requestedModelId && !isAIProviderModelId(providerId, requestedModelId)) {
+    throw new Error(`不支持的 ${preset.label} 模型: ${requestedModelId}`);
+  }
+
   const modelId = clean(
-    (useBuiltInProvider ? '' : body.modelId) ||
+    (useBuiltInProvider ? requestedModelId : body.modelId) ||
       process.env[`${providerEnv}_MODEL_ID`] ||
       process.env.AI_IMAGE_MODEL_ID ||
       preset.modelId

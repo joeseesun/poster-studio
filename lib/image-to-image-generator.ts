@@ -2,6 +2,7 @@ import {
   AI_PROVIDER_STORAGE_KEYS,
   DEFAULT_AI_PROVIDER_ID,
   isAIProviderId,
+  isAIProviderModelId,
   isBuiltInAIProvider,
 } from './ai-provider-config';
 
@@ -22,7 +23,11 @@ export class ImageToImageGenerator {
     const providerId = isAIProviderId(savedProviderId) ? savedProviderId : DEFAULT_AI_PROVIDER_ID;
 
     if (isBuiltInAIProvider(providerId)) {
-      return { providerId };
+      const savedModelId = localStorage.getItem(AI_PROVIDER_STORAGE_KEYS.modelId);
+      return {
+        providerId,
+        modelId: isAIProviderModelId(providerId, savedModelId) ? savedModelId || undefined : undefined,
+      };
     }
 
     return {

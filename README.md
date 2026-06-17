@@ -36,7 +36,7 @@ npm run dev
 应用支持在设置弹窗中切换 AI 生图服务商预设：
 
 - **HiAPI**：默认端点 `https://api.hiapi.ai/v1/images/generations`，默认模型 `qwen-image-2.0`
-- **即梦 API**：默认端点 `https://api.qiaomu.ai/jimeng-auth/v1/images/generations`，默认模型 `jimeng-5.0`，线上版由乔木服务端内置
+- **即梦 API**：默认端点 `https://api.qiaomu.ai/jimeng-auth/v1/images/generations`，线上版由乔木服务端内置；模型可在设置里从 `jimeng-5.0`、`jimeng-4.5`、`jimeng` 下拉选择
 - **火山方舟 / Seedream**：保留现有 Seedream 兼容请求格式
 - **自定义兼容接口**：手动填写 Endpoint、Model ID、认证方式和请求格式
 
