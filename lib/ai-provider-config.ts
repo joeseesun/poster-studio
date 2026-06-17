@@ -1,6 +1,6 @@
 export type AIProviderId = 'volc-seedream' | 'hiapi' | 'jimeng' | 'custom';
 export type AIAuthHeader = 'bearer' | 'x-api-key';
-export type AIRequestFormat = 'seedream' | 'openai-image' | 'jimeng';
+export type AIRequestFormat = 'seedream' | 'openai-image' | 'jimeng' | 'hiapi-task';
 
 export interface AIModelOption {
   value: string;
@@ -18,6 +18,8 @@ export interface AIProviderPreset {
   authHeader: AIAuthHeader;
   requestFormat: AIRequestFormat;
   docsUrl?: string;
+  apiKeyUrl?: string;
+  modelsUrl?: string;
   builtIn?: boolean;
 }
 
@@ -70,6 +72,59 @@ export const JIMENG_MODEL_OPTIONS: AIModelOption[] = [
   },
 ];
 
+export const HIAPI_MODEL_OPTIONS: AIModelOption[] = [
+  {
+    value: 'gpt-image-2-beta',
+    label: 'GPT Image 2 Beta',
+    description: 'HiAPI 异步任务模型，低成本测试，使用 prompt + size。',
+  },
+  {
+    value: 'gpt-image-2',
+    label: 'GPT Image 2',
+    description: 'HiAPI 主力文生图模型，适合文字和版式要求。',
+  },
+  {
+    value: 'gpt-image-2-pro',
+    label: 'GPT Image 2 Pro',
+    description: '更高质量的品牌视觉、海报和商业图像。',
+  },
+  {
+    value: 'qwen-image-2.0',
+    label: 'Qwen Image 2.0',
+    description: '低成本图片模型，中文提示词和文字渲染表现较好。',
+  },
+  {
+    value: 'flux-1.1-pro',
+    label: 'FLUX 1.1 Pro',
+    description: '写实产品、人物与商业摄影风格。',
+  },
+  {
+    value: 'Nano-Banana',
+    label: 'Nano Banana',
+    description: '快速出图，适合草图和批量创意探索。',
+  },
+  {
+    value: 'Nano-Banana-2',
+    label: 'Nano Banana 2',
+    description: '平衡型 Nano Banana 图片模型。',
+  },
+  {
+    value: 'Nano-Banana-Pro',
+    label: 'Nano Banana Pro',
+    description: '更高级的品牌视觉和参考图编辑模型。',
+  },
+  {
+    value: 'gpt-image-2-image-to-image',
+    label: 'GPT Image 2 Image-to-Image',
+    description: '图生图 / 参考图改写模型。',
+  },
+  {
+    value: 'gpt-image-2-image-to-image-pro',
+    label: 'GPT Image 2 Pro Image-to-Image',
+    description: '高质量图生图 / 参考图改写模型。',
+  },
+];
+
 export const AI_PROVIDER_PRESETS: AIProviderPreset[] = [
   {
     id: 'volc-seedream',
@@ -84,12 +139,15 @@ export const AI_PROVIDER_PRESETS: AIProviderPreset[] = [
   {
     id: 'hiapi',
     label: 'HiAPI',
-    description: 'OpenAI Images API 兼容接口，适合 Qwen Image 等模型。',
-    endpoint: 'https://api.hiapi.ai/v1/images/generations',
-    modelId: 'qwen-image-2.0',
+    description: '统一异步任务接口，支持 GPT Image、Qwen Image、FLUX、Nano Banana 等模型。',
+    endpoint: 'https://api.hiapi.ai/v1/tasks',
+    modelId: 'gpt-image-2-beta',
+    modelOptions: HIAPI_MODEL_OPTIONS,
     authHeader: 'bearer',
-    requestFormat: 'openai-image',
-    docsUrl: 'https://docs.hiapi.ai/zh/guides/image-generation/',
+    requestFormat: 'hiapi-task',
+    docsUrl: 'https://docs.hiapi.ai/async-api/',
+    apiKeyUrl: 'https://www.hiapi.ai/zh/register?aff=NIWx',
+    modelsUrl: 'https://www.hiapi.ai/api/pricing',
   },
   {
     id: 'jimeng',
@@ -141,6 +199,11 @@ export const AI_REQUEST_FORMAT_OPTIONS: Array<{
     description: 'model / prompt / size，主要用于文生图。',
   },
   {
+    value: 'hiapi-task',
+    label: 'HiAPI Tasks',
+    description: 'POST /v1/tasks 创建任务，再轮询 /v1/tasks/:id。',
+  },
+  {
     value: 'seedream',
     label: 'Seedream',
     description: '兼容火山方舟图片生成与参考图参数。',
@@ -179,5 +242,5 @@ export function isAIAuthHeader(value: string | null | undefined): value is AIAut
 }
 
 export function isAIRequestFormat(value: string | null | undefined): value is AIRequestFormat {
-  return value === 'seedream' || value === 'openai-image' || value === 'jimeng';
+  return value === 'seedream' || value === 'openai-image' || value === 'jimeng' || value === 'hiapi-task';
 }

@@ -35,7 +35,7 @@ npm run dev
 
 应用支持在设置弹窗中切换 AI 生图服务商预设：
 
-- **HiAPI**：默认端点 `https://api.hiapi.ai/v1/images/generations`，默认模型 `qwen-image-2.0`
+- **HiAPI**：默认端点 `https://api.hiapi.ai/v1/tasks`，默认模型 `gpt-image-2-beta`；模型下拉会从 HiAPI 模型接口刷新图片 task 模型，API Key 获取入口为 [https://www.hiapi.ai/zh/register?aff=NIWx](https://www.hiapi.ai/zh/register?aff=NIWx)
 - **即梦 API**：默认端点 `https://api.qiaomu.ai/jimeng-auth/v1/images/generations`，线上版由乔木服务端内置；模型可在设置里从 `jimeng-5.0`、`jimeng-4.6`、`jimeng-4.5`、`jimeng-4.1`、`jimeng-4.0`、`jimeng-3.1`、`jimeng-3.0` 下拉选择
 - **火山方舟 / Seedream**：保留现有 Seedream 兼容请求格式
 - **自定义兼容接口**：手动填写 Endpoint、Model ID、认证方式和请求格式
@@ -64,13 +64,15 @@ QINIU_BUCKET=your_bucket
 QINIU_DOMAIN=https://your-cdn-domain.example.com
 ```
 
-分享链接、公开模板和公开素材依赖 Vercel KV 兼容的 REST 环境变量：
+分享链接、公开模板和公开素材会优先使用 Vercel KV 兼容的 REST 环境变量：
 
 ```bash
 KV_REST_API_URL=your_kv_rest_url
 KV_REST_API_TOKEN=your_kv_rest_token
 KV_REST_API_READ_ONLY_TOKEN=your_kv_read_only_token
 ```
+
+如果没有配置 KV，服务端会自动回退到本地文件存储。可通过 `POSTER_STUDIO_DATA_DIR` 指定持久化目录；未指定时使用项目根目录下的 `.data/`。
 
 ### 构建生产版本
 

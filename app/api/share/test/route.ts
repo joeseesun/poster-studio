@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getPublicStore } from '@/lib/server/public-store';
 
 export async function GET() {
   try {
@@ -13,48 +14,23 @@ export async function GET() {
 
     console.log('🔍 环境变量检查:', envCheck);
 
-    // 尝试导入 @vercel/kv
-    let kvImportSuccess = false;
-    let kvError = null;
-    try {
-      const { kv } = await import('@vercel/kv');
-      kvImportSuccess = true;
-
-      // 尝试简单的 KV 操作
-      try {
-        await kv.set('test-key', 'test-value', { ex: 10 });
-        const value = await kv.get('test-key');
-        await kv.del('test-key');
-
-        return NextResponse.json({
-          success: true,
-          message: 'Vercel KV 配置正确',
-          envCheck,
-          kvTest: {
-            set: true,
-            get: value === 'test-value',
-            del: true,
-          },
-        });
-      } catch (kvOpError) {
-        return NextResponse.json({
-          success: false,
-          message: 'Vercel KV 操作失败',
-          envCheck,
-          error: kvOpError instanceof Error ? kvOpError.message : String(kvOpError),
-        }, { status: 500 });
-      }
-    } catch (importError) {
-      kvError = importError instanceof Error ? importError.message : String(importError);
-    }
+    const store = getPublicStore();
+    const testKey = `test-key-${Date.now()}`;
+    await store.set(testKey, 'test-value', { ex: 10 });
+    const value = await store.get<string>(testKey);
+    await store.del(testKey);
 
     return NextResponse.json({
-      success: false,
-      message: 'Vercel KV 导入失败',
+      success: value === 'test-value',
+      message: value === 'test-value' ? '公开分享存储可用' : '公开分享存储读写异常',
       envCheck,
-      kvImportSuccess,
-      kvError,
-    }, { status: 500 });
+      storeProvider: store.provider,
+      storageTest: {
+        set: true,
+        get: value === 'test-value',
+        del: true,
+      },
+    }, { status: value === 'test-value' ? 200 : 500 });
   } catch (error) {
     console.error('❌ 测试失败:', error);
     return NextResponse.json({

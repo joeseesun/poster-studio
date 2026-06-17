@@ -4,8 +4,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { kv } from '@vercel/kv';
 import { nanoid } from 'nanoid';
+import { getPublicStore } from '@/lib/server/public-store';
 
 export async function POST(request: NextRequest) {
   try {
@@ -34,16 +34,18 @@ export async function POST(request: NextRequest) {
       createdAt: Date.now(),
     };
 
-    // 保存到 Vercel KV
+    const store = getPublicStore();
+
+    // 保存到共享素材存储
     // 使用 material:public:{id} 作为 key
-    await kv.set(`material:public:${id}`, material, {
+    await store.set(`material:public:${id}`, material, {
       ex: 60 * 60 * 24 * 365, // 1年过期
     });
 
     // 将素材 ID 添加到共享素材列表
-    await kv.sadd('material:public:list', id);
+    await store.sadd('material:public:list', id);
 
-    console.log('✅ 共享素材创建成功:', { id, name });
+    console.log('✅ 共享素材创建成功:', { id, name, store: store.provider });
 
     return NextResponse.json({
       success: true,

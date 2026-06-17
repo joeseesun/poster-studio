@@ -1,8 +1,10 @@
-import { kv } from '@vercel/kv';
 import { Metadata } from 'next';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
+import { getPublicStore } from '@/lib/server/public-store';
+
+export const dynamic = 'force-dynamic';
 
 interface ShareData {
   imageUrl: string;
@@ -16,7 +18,7 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const resolvedParams = await params;
-  const data = await kv.get<ShareData>(`share:${resolvedParams.id}`);
+  const data = await getPublicStore().get<ShareData>(`share:${resolvedParams.id}`);
 
   if (!data) {
     return {
@@ -48,7 +50,7 @@ export default async function SharePage({
   params: Promise<{ id: string }>;
 }) {
   const resolvedParams = await params;
-  const data = await kv.get<ShareData>(`share:${resolvedParams.id}`);
+  const data = await getPublicStore().get<ShareData>(`share:${resolvedParams.id}`);
 
   if (!data) {
     notFound();
