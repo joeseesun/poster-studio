@@ -142,7 +142,6 @@ export function buildImageGenerationPayload({
       prompt,
       ...(image ? { image } : {}),
       response_format: 'url',
-      size: jimengSize.quality,
       ratio: jimengSize.ratio,
       resolution: jimengSize.quality.toLowerCase(),
     };
@@ -163,6 +162,12 @@ export function buildImageGenerationPayload({
 export function extractImageUrl(result: unknown): string {
   if (!result || typeof result !== 'object') {
     throw new Error('AI API 返回数据格式错误');
+  }
+
+  const apiCode = (result as { code?: unknown }).code;
+  if (typeof apiCode === 'number' && apiCode !== 0) {
+    const message = (result as { message?: unknown }).message;
+    throw new Error(typeof message === 'string' && message ? message : `AI API 返回错误 code=${apiCode}`);
   }
 
   const data = (result as { data?: unknown }).data;
