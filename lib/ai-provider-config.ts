@@ -36,17 +36,37 @@ export const JIMENG_MODEL_OPTIONS: AIModelOption[] = [
   {
     value: 'jimeng-5.0',
     label: '即梦 5.0',
-    description: '默认推荐，质量更高。',
+    description: '默认推荐，中国站和亚洲国际站可用。',
+  },
+  {
+    value: 'jimeng-4.6',
+    label: '即梦 4.6',
+    description: '中国站和亚洲国际站可用，支持智能比例。',
   },
   {
     value: 'jimeng-4.5',
     label: '即梦 4.5',
+    description: '即梦代理默认模型，兼容性最好。',
+  },
+  {
+    value: 'jimeng-4.1',
+    label: '即梦 4.1',
+    description: '兼容旧版生成链路，支持智能比例。',
+  },
+  {
+    value: 'jimeng-4.0',
+    label: '即梦 4.0',
     description: '兼容旧版生成链路。',
   },
   {
-    value: 'jimeng',
-    label: '即梦默认',
-    description: '由乔木即梦代理选择默认模型。',
+    value: 'jimeng-3.1',
+    label: '即梦 3.1',
+    description: '中国站可用的旧版模型。',
+  },
+  {
+    value: 'jimeng-3.0',
+    label: '即梦 3.0',
+    description: '旧版通用模型。',
   },
 ];
 
