@@ -5,6 +5,7 @@ import {
   DEFAULT_AI_PROVIDER_ID,
   getAIProviderPreset,
   isAIAuthHeader,
+  isBuiltInAIProvider,
   isAIProviderId,
   isAIRequestFormat,
 } from '@/lib/ai-provider-config';
@@ -31,18 +32,21 @@ export function resolveAIProviderConfig(body: AIProviderRequestBody): ResolvedAI
   const providerId = resolveProviderId(body.providerId || process.env.AI_IMAGE_PROVIDER_ID);
   const preset = getAIProviderPreset(providerId);
   const providerEnv = getProviderEnvPrefix(providerId);
+  const useBuiltInProvider = isBuiltInAIProvider(providerId) && !clean(body.apiKey);
 
   const apiKey = clean(
-    body.apiKey ||
-      process.env[`${providerEnv}_API_KEY`] ||
-      process.env.AI_IMAGE_API_KEY ||
-      process.env.HIAPI_API_KEY ||
-      process.env.JIMENG_API_KEY ||
-      process.env.ARK_API_KEY
+    useBuiltInProvider
+      ? process.env[`${providerEnv}_API_KEY`]
+      : body.apiKey ||
+          process.env[`${providerEnv}_API_KEY`] ||
+          process.env.AI_IMAGE_API_KEY ||
+          process.env.HIAPI_API_KEY ||
+          process.env.JIMENG_API_KEY ||
+          process.env.ARK_API_KEY
   );
   const endpoint = normalizeImageEndpoint(
     clean(
-      body.apiEndpoint ||
+      (useBuiltInProvider ? '' : body.apiEndpoint) ||
         process.env[`${providerEnv}_API_ENDPOINT`] ||
         process.env[`${providerEnv}_BASE_URL`] ||
         process.env.AI_IMAGE_API_ENDPOINT ||
@@ -50,25 +54,28 @@ export function resolveAIProviderConfig(body: AIProviderRequestBody): ResolvedAI
     )
   );
   const modelId = clean(
-    body.modelId ||
+    (useBuiltInProvider ? '' : body.modelId) ||
       process.env[`${providerEnv}_MODEL_ID`] ||
       process.env.AI_IMAGE_MODEL_ID ||
       preset.modelId
   );
   const authHeader = resolveAuthHeader(
-    body.authHeader ||
+    (useBuiltInProvider ? '' : body.authHeader) ||
       process.env[`${providerEnv}_AUTH_HEADER`] ||
       process.env.AI_IMAGE_AUTH_HEADER ||
       preset.authHeader
   );
   const requestFormat = resolveRequestFormat(
-    body.requestFormat ||
+    (useBuiltInProvider ? '' : body.requestFormat) ||
       process.env[`${providerEnv}_REQUEST_FORMAT`] ||
       process.env.AI_IMAGE_REQUEST_FORMAT ||
       preset.requestFormat
   );
 
   if (!apiKey) {
+    if (useBuiltInProvider) {
+      throw new Error(`服务端未配置 ${providerEnv}_API_KEY，内置 ${preset.label} 暂不可用`);
+    }
     throw new Error('缺少 AI API Key，请在设置中填写，或配置服务端 AI_IMAGE_API_KEY');
   }
 

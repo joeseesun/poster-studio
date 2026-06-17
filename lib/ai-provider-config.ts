@@ -11,6 +11,7 @@ export interface AIProviderPreset {
   authHeader: AIAuthHeader;
   requestFormat: AIRequestFormat;
   docsUrl?: string;
+  builtIn?: boolean;
 }
 
 export const AI_PROVIDER_STORAGE_KEYS = {
@@ -22,7 +23,7 @@ export const AI_PROVIDER_STORAGE_KEYS = {
   requestFormat: 'ai_request_format',
 } as const;
 
-export const DEFAULT_AI_PROVIDER_ID: AIProviderId = 'volc-seedream';
+export const DEFAULT_AI_PROVIDER_ID: AIProviderId = 'jimeng';
 
 export const AI_PROVIDER_PRESETS: AIProviderPreset[] = [
   {
@@ -48,11 +49,12 @@ export const AI_PROVIDER_PRESETS: AIProviderPreset[] = [
   {
     id: 'jimeng',
     label: '即梦 API',
-    description: '即梦兼容接口，支持 1K / 2K / 4K 与参考图改图。',
+    description: '乔木内置免费服务，默认使用 jimeng-5.0。',
     endpoint: 'https://api.qiaomu.ai/jimeng-auth/v1/images/generations',
-    modelId: 'jimeng-4.5',
+    modelId: 'jimeng-5.0',
     authHeader: 'x-api-key',
     requestFormat: 'jimeng',
+    builtIn: true,
   },
   {
     id: 'custom',
@@ -109,6 +111,11 @@ export function getAIProviderPreset(providerId?: string | null): AIProviderPrese
     AI_PROVIDER_PRESETS.find((preset) => preset.id === providerId) ||
     AI_PROVIDER_PRESETS.find((preset) => preset.id === DEFAULT_AI_PROVIDER_ID)!
   );
+}
+
+export function isBuiltInAIProvider(providerId?: string | null): boolean {
+  const preset = getAIProviderPreset(isAIProviderId(providerId) ? providerId : DEFAULT_AI_PROVIDER_ID);
+  return preset.builtIn === true;
 }
 
 export function isAIProviderId(value: string | null | undefined): value is AIProviderId {

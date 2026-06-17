@@ -1,4 +1,9 @@
-import { AI_PROVIDER_STORAGE_KEYS } from './ai-provider-config';
+import {
+  AI_PROVIDER_STORAGE_KEYS,
+  DEFAULT_AI_PROVIDER_ID,
+  isAIProviderId,
+  isBuiltInAIProvider,
+} from './ai-provider-config';
 
 // 图片转图片生成器 - 通过Next.js API路由调用
 export class ImageToImageGenerator {
@@ -13,8 +18,15 @@ export class ImageToImageGenerator {
   private getConfig() {
     if (typeof window === 'undefined') return {};
 
+    const savedProviderId = localStorage.getItem(AI_PROVIDER_STORAGE_KEYS.providerId);
+    const providerId = isAIProviderId(savedProviderId) ? savedProviderId : DEFAULT_AI_PROVIDER_ID;
+
+    if (isBuiltInAIProvider(providerId)) {
+      return { providerId };
+    }
+
     return {
-      providerId: localStorage.getItem(AI_PROVIDER_STORAGE_KEYS.providerId) || undefined,
+      providerId,
       apiKey: localStorage.getItem(AI_PROVIDER_STORAGE_KEYS.apiKey) || undefined,
       apiEndpoint: localStorage.getItem(AI_PROVIDER_STORAGE_KEYS.apiEndpoint) || undefined,
       modelId: localStorage.getItem(AI_PROVIDER_STORAGE_KEYS.modelId) || undefined,
