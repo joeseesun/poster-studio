@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { kv } from '@vercel/kv';
+import { getPublicStore } from '@/lib/server/public-store';
 
 export async function GET(request: NextRequest) {
   try {
@@ -18,8 +18,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // 从 KV 获取公开模板
-    const template = await kv.get(`template:public:${id}`);
+    // 从公开模板存储获取
+    const template = await getPublicStore().get(`template:public:${id}`);
 
     if (!template) {
       return NextResponse.json(

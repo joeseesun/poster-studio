@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
-  buildAIHeaders,
   buildImageGenerationPayload,
-  extractImageUrl,
+  requestAIImageUrl,
   resolveAIProviderConfig,
 } from '@/lib/server/ai-provider';
 import { persistRemoteImageToQiniu } from '@/lib/server/qiniu';
@@ -43,27 +42,7 @@ export async function POST(request: NextRequest) {
       size,
     });
 
-    const response = await fetch(config.endpoint, {
-      method: 'POST',
-      headers: buildAIHeaders(config),
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('AI 图生图 API 错误', {
-        status: response.status,
-        statusText: response.statusText,
-        body: errorText,
-      });
-      return NextResponse.json(
-        { error: `API请求失败: ${response.status} ${errorText}` },
-        { status: response.status }
-      );
-    }
-
-    const data = await response.json();
-    const originalUrl = extractImageUrl(data);
+    const originalUrl = await requestAIImageUrl(config, payload);
     const persisted = await persistRemoteImageToQiniu(
       originalUrl,
       'ai-transformed.jpg',

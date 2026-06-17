@@ -5,6 +5,15 @@ export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://ps.qiaomu.ai'),
   title: "乔木画布 Poster Studio",
   description: "在线制作小红书封面、知识卡片和社媒海报，支持高亮文字、版本管理、AI 生图和一键导出",
+  icons: {
+    icon: [
+      { url: '/icon.png', type: 'image/png', sizes: '512x512' },
+      { url: '/favicon.ico', sizes: 'any' },
+    ],
+    apple: [
+      { url: '/apple-icon.png', sizes: '180x180' },
+    ],
+  },
   openGraph: {
     title: "乔木画布 Poster Studio",
     description: "在线制作小红书封面、知识卡片和社媒海报",

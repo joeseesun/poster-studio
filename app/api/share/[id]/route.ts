@@ -1,5 +1,5 @@
-import { kv } from '@vercel/kv';
 import { NextRequest, NextResponse } from 'next/server';
+import { getPublicStore } from '@/lib/server/public-store';
 
 export async function GET(
   request: NextRequest,
@@ -7,7 +7,7 @@ export async function GET(
 ) {
   try {
     const params = await context.params;
-    const data = await kv.get(`share:${params.id}`);
+    const data = await getPublicStore().get(`share:${params.id}`);
 
     if (!data) {
       return NextResponse.json(

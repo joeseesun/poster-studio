@@ -4,12 +4,14 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { kv } from '@vercel/kv';
+import { getPublicStore } from '@/lib/server/public-store';
 
 export async function GET(request: NextRequest) {
   try {
+    const store = getPublicStore();
+
     // 获取所有公开模板 ID
-    const templateIds = await kv.smembers('template:public:list');
+    const templateIds = await store.smembers('template:public:list');
 
     if (!templateIds || templateIds.length === 0) {
       return NextResponse.json({
@@ -21,7 +23,7 @@ export async function GET(request: NextRequest) {
     // 批量获取模板数据
     const templates = await Promise.all(
       templateIds.map(async (id) => {
-        const template = await kv.get(`template:public:${id}`);
+        const template = await store.get(`template:public:${id}`);
         return template;
       })
     );

@@ -5,8 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useState, useEffect } from 'react';
+import { ExternalLink, Loader2, RefreshCw } from 'lucide-react';
 import {
   AI_AUTH_HEADER_OPTIONS,
+  AIModelOption,
   AI_PROVIDER_PRESETS,
   AI_PROVIDER_STORAGE_KEYS,
   AI_REQUEST_FORMAT_OPTIONS,
@@ -51,9 +53,15 @@ export default function SettingsDialog({ isOpen, onClose }: SettingsDialogProps)
   const [authHeader, setAuthHeader] = useState<AIAuthHeader>('bearer');
   const [requestFormat, setRequestFormat] = useState<AIRequestFormat>('seedream');
   const [removeBgApiKey, setRemoveBgApiKey] = useState('');
+  const [remoteModelOptions, setRemoteModelOptions] = useState<AIModelOption[]>([]);
+  const [isLoadingModels, setIsLoadingModels] = useState(false);
+  const [modelSource, setModelSource] = useState('');
+  const [modelLoadError, setModelLoadError] = useState('');
   const isBuiltInProvider = isBuiltInAIProvider(providerId);
   const activeProvider = getAIProviderPreset(providerId);
-  const modelOptions = activeProvider.modelOptions || [];
+  const modelOptions = providerId === 'hiapi' && remoteModelOptions.length > 0
+    ? remoteModelOptions
+    : activeProvider.modelOptions || [];
 
   useEffect(() => {
     if (isOpen) {
@@ -80,6 +88,18 @@ export default function SettingsDialog({ isOpen, onClose }: SettingsDialogProps)
     }
   }, [isOpen]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    if (providerId !== 'hiapi') {
+      setRemoteModelOptions([]);
+      setModelSource('');
+      setModelLoadError('');
+      return;
+    }
+
+    loadProviderModels(providerId);
+  }, [isOpen, providerId]);
+
   const handleProviderChange = (nextProviderId: AIProviderId) => {
     const provider = getAIProviderPreset(nextProviderId);
     setProviderId(nextProviderId);
@@ -87,6 +107,44 @@ export default function SettingsDialog({ isOpen, onClose }: SettingsDialogProps)
     setModelId(provider.modelId);
     setAuthHeader(provider.authHeader);
     setRequestFormat(provider.requestFormat);
+    if (nextProviderId !== 'hiapi') {
+      setRemoteModelOptions([]);
+      setModelSource('');
+      setModelLoadError('');
+    }
+  };
+
+  const loadProviderModels = async (targetProviderId: AIProviderId = providerId) => {
+    if (targetProviderId !== 'hiapi') return;
+
+    setIsLoadingModels(true);
+    setModelLoadError('');
+    try {
+      const response = await fetch('/api/ai-models', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          providerId: targetProviderId,
+          apiKey: apiKey.trim(),
+          apiEndpoint: apiEndpoint.trim(),
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || '模型列表加载失败');
+      }
+
+      const models = Array.isArray(data.models) ? data.models as AIModelOption[] : [];
+      setRemoteModelOptions(models);
+      setModelSource(typeof data.source === 'string' ? data.source : '');
+      if (models.length > 0 && !models.some((option) => option.value === modelId)) {
+        setModelId(models[0].value);
+      }
+    } catch (error) {
+      setModelLoadError(error instanceof Error ? error.message : '模型列表加载失败');
+    } finally {
+      setIsLoadingModels(false);
+    }
   };
 
   const handleSaveSettings = () => {
@@ -193,7 +251,24 @@ export default function SettingsDialog({ isOpen, onClose }: SettingsDialogProps)
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="model-id">模型 ID *</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="model-id">模型 ID *</Label>
+                {providerId === 'hiapi' && (
+                  <button
+                    type="button"
+                    onClick={() => loadProviderModels('hiapi')}
+                    disabled={isLoadingModels}
+                    className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary disabled:opacity-50"
+                  >
+                    {isLoadingModels ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <RefreshCw className="h-3 w-3" />
+                    )}
+                    刷新模型
+                  </button>
+                )}
+              </div>
               {modelOptions.length > 0 ? (
                 <select
                   id="model-id"
@@ -217,16 +292,38 @@ export default function SettingsDialog({ isOpen, onClose }: SettingsDialogProps)
                   disabled={isBuiltInProvider}
                 />
               )}
-              {modelOptions.length > 0 && (
+              {isLoadingModels ? (
+                <p className="text-xs text-muted-foreground">
+                  正在从 HiAPI 模型接口加载...
+                </p>
+              ) : modelLoadError ? (
+                <p className="text-xs text-amber-600">
+                  模型列表刷新失败，已使用默认列表：{modelLoadError}
+                </p>
+              ) : modelOptions.length > 0 ? (
                 <p className="text-xs text-muted-foreground">
                   {modelOptions.find((option) => option.value === (modelId || activeProvider.modelId))?.description || activeProvider.description}
+                  {providerId === 'hiapi' && modelSource && ` · 来源：${modelSource === 'hiapi-pricing' ? 'HiAPI 模型接口' : '默认列表'}`}
                 </p>
-              )}
+              ) : null}
             </div>
 
             {!isBuiltInProvider && (
               <div className="space-y-2">
-                <Label htmlFor="api-key">API Key *</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="api-key">API Key *</Label>
+                  {activeProvider.apiKeyUrl && (
+                    <a
+                      href={activeProvider.apiKeyUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-muted-foreground hover:text-primary inline-flex items-center gap-1"
+                    >
+                      获取 API
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  )}
+                </div>
                 <Input
                   id="api-key"
                   type="password"

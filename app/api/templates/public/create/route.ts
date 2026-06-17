@@ -4,8 +4,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { kv } from '@vercel/kv';
 import { nanoid } from 'nanoid';
+import { getPublicStore } from '@/lib/server/public-store';
 
 export async function POST(request: NextRequest) {
   try {
@@ -34,16 +34,18 @@ export async function POST(request: NextRequest) {
       createdAt: Date.now(),
     };
 
-    // 保存到 Vercel KV
+    const store = getPublicStore();
+
+    // 保存到公开模板存储
     // 使用 template:public:{id} 作为 key
-    await kv.set(`template:public:${id}`, publicTemplate, {
+    await store.set(`template:public:${id}`, publicTemplate, {
       ex: 60 * 60 * 24 * 365, // 1年过期
     });
 
     // 将模板 ID 添加到公开模板列表
-    await kv.sadd('template:public:list', id);
+    await store.sadd('template:public:list', id);
 
-    console.log('✅ 公开模板创建成功:', { id, name });
+    console.log('✅ 公开模板创建成功:', { id, name, store: store.provider });
 
     return NextResponse.json({
       success: true,

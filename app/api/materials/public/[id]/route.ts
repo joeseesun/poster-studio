@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { kv } from '@vercel/kv';
+import { getPublicStore } from '@/lib/server/public-store';
 
 export async function DELETE(
   request: NextRequest,
@@ -20,11 +20,13 @@ export async function DELETE(
       );
     }
 
-    // 从 Vercel KV 删除素材数据
-    await kv.del(`material:public:${id}`);
+    const store = getPublicStore();
+
+    // 从共享素材存储删除素材数据
+    await store.del(`material:public:${id}`);
 
     // 从共享素材列表中移除
-    await kv.srem('material:public:list', id);
+    await store.srem('material:public:list', id);
 
     console.log('✅ 共享素材删除成功:', id);
 

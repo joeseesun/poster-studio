@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { kv } from '@vercel/kv';
+import { getPublicStore } from '@/lib/server/public-store';
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,8 +14,10 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '20');
     const search = searchParams.get('search') || '';
 
+    const store = getPublicStore();
+
     // 获取所有共享素材 ID
-    const materialIds = await kv.smembers('material:public:list');
+    const materialIds = await store.smembers('material:public:list');
 
     if (!materialIds || materialIds.length === 0) {
       return NextResponse.json({
@@ -31,7 +33,7 @@ export async function GET(request: NextRequest) {
     // 批量获取素材数据
     const materials = await Promise.all(
       materialIds.map(async (id) => {
-        const material = await kv.get(`material:public:${id}`);
+        const material = await store.get(`material:public:${id}`);
         return material;
       })
     );
