@@ -1,5 +1,5 @@
 // 版本管理器
-import { CanvasVersion } from './types';
+import { CanvasSize, CanvasVersion } from './types';
 
 export class VersionManager {
   private versions: CanvasVersion[] = [];
@@ -11,11 +11,14 @@ export class VersionManager {
     if (this.versions.length === 0) {
       this.create('画布 1');
     }
-    this.activeId = this.versions[0].id;
+    if (!this.versions.some((version) => version.id === this.activeId)) {
+      this.activeId = this.versions[0].id;
+      this.save();
+    }
   }
 
   // 创建新版本
-  create(name?: string) {
+  create(name?: string, canvasSize?: CanvasSize) {
     if (this.versions.length >= 5) {
       throw new Error('最多支持 5 个画布');
     }
@@ -23,6 +26,7 @@ export class VersionManager {
       id: Date.now().toString(),
       name: name || `画布 ${this.versions.length + 1}`,
       data: '',
+      canvasSize,
       createdAt: Date.now(),
       updatedAt: Date.now(),
     };
@@ -32,23 +36,26 @@ export class VersionManager {
   }
 
   // 复制版本
-  duplicate(sourceId: string, data: string) {
+  duplicate(sourceId: string, data: string, canvasSize?: CanvasSize) {
     const source = this.versions.find((v) => v.id === sourceId);
     if (!source) {
       throw new Error('源版本不存在');
     }
-    const newVersion = this.create(`${source.name} - 副本`);
+    const newVersion = this.create(`${source.name} - 副本`, canvasSize || source.canvasSize);
     newVersion.data = data;
     this.save();
     return newVersion;
   }
 
   // 更新版本
-  update(id: string, data: string, thumbnail?: string) {
+  update(id: string, data: string, thumbnail?: string, canvasSize?: CanvasSize) {
     const version = this.versions.find((v) => v.id === id);
     if (version) {
       version.data = data;
       version.updatedAt = Date.now();
+      if (canvasSize) {
+        version.canvasSize = canvasSize;
+      }
       if (thumbnail) {
         version.thumbnail = thumbnail;
       }

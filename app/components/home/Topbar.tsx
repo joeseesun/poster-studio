@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Menu, Download, Copy, Plus, ZoomIn, ZoomOut, Pencil, Trash2, Check, X, Database, ChevronDown, Palette, Hand, MousePointer2, Settings, Heart, QrCode, Layout, Save, Share2, Loader2, Github, Sparkles } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 interface TopbarProps {
   versions: CanvasVersion[];
@@ -74,6 +74,12 @@ export default function Topbar({
   const [editingName, setEditingName] = useState('');
 
   const activeVersion = versions.find((v) => v.id === activeVersionId);
+
+  useEffect(() => {
+    if (canvasSize.ratio in CANVAS_RATIOS) {
+      setActiveRatio(canvasSize.ratio as keyof typeof CANVAS_RATIOS);
+    }
+  }, [canvasSize.ratio]);
 
   const handleStartRename = (version: CanvasVersion) => {
     setEditingVersionId(version.id);

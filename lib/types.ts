@@ -3,6 +3,7 @@ export interface CanvasVersion {
   id: string;
   name: string;
   data: string;              // Fabric.js JSON
+  canvasSize?: CanvasSize;   // 当前画布尺寸
   thumbnail?: string;        // Base64
   createdAt: number;
   updatedAt: number;
