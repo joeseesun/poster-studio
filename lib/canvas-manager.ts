@@ -3687,6 +3687,16 @@ export class CanvasManager {
     this.canvas.setBackgroundColor('#ffffff', () => this.canvas.renderAll());
   }
 
+  // 调整画布尺寸，保留当前对象和事件绑定
+  resize(width: number, height: number) {
+    this.width = width;
+    this.height = height;
+    this.canvas.setWidth(width);
+    this.canvas.setHeight(height);
+    this.canvas.calcOffset();
+    this.canvas.renderAll();
+  }
+
   // ✅ 已移除 migrateOldGroups 方法
   // 原因：rebindGroupEvents 已经处理了 Group 的双击编辑功能
   // 不再需要将 Group 转换为 IText

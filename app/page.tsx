@@ -36,6 +36,22 @@ import { getImageLibrary } from '@/lib/image-library';
 import ShareDialog from './components/ShareDialog';
 import ShareMaterialDialog from './components/home/ShareMaterialDialog';
 
+function normalizeCanvasSize(size?: CanvasSize | null): CanvasSize {
+  const width = Number(size?.width);
+  const height = Number(size?.height);
+
+  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+    return DEFAULT_CANVAS_SIZE;
+  }
+
+  return {
+    name: size?.name || `${width}×${height}`,
+    width,
+    height,
+    ratio: size?.ratio || (width === height ? '1:1' : `${width}:${height}`),
+  };
+}
+
 export default function Home() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const managerRef = useRef<CanvasManager | null>(null);
@@ -47,6 +63,7 @@ export default function Home() {
   const [activeTool, setActiveTool] = useState('text');
   const [canvasScale, setCanvasScale] = useState(1);
   const [canvasSize, setCanvasSize] = useState<CanvasSize>(DEFAULT_CANVAS_SIZE);
+  const canvasSizeRef = useRef<CanvasSize>(DEFAULT_CANVAS_SIZE);
   const [userZoom, setUserZoom] = useState(100); // 用户手动缩放（50-200%）
   const [isPanMode, setIsPanMode] = useState(false); // 拖拽模式锁定状态
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
@@ -85,17 +102,13 @@ export default function Home() {
   const [shareUrl, setShareUrl] = useState('');
   const [isSharing, setIsSharing] = useState(false);
 
+  useEffect(() => {
+    canvasSizeRef.current = canvasSize;
+  }, [canvasSize]);
+
   // 初始化 - 只在组件挂载时执行一次
   useEffect(() => {
     if (!canvasRef.current) return;
-
-    managerRef.current = new CanvasManager(
-      canvasRef.current,
-      canvasSize.width,
-      canvasSize.height
-    );
-    // 🆕 启用历史记录（构造函数中默认禁用）
-    managerRef.current.setLoadingTemplate(false);
 
     versionRef.current = new VersionManager();
     aiImageGeneratorRef.current = new AIImageGenerator();
@@ -103,11 +116,24 @@ export default function Home() {
 
     const allVersions = versionRef.current.getAll();
     const activeVersion = versionRef.current.getActive();
+    const initialCanvasSize = normalizeCanvasSize(activeVersion?.canvasSize);
+
+    canvasSizeRef.current = initialCanvasSize;
+    setCanvasSize(initialCanvasSize);
+
+    managerRef.current = new CanvasManager(
+      canvasRef.current,
+      initialCanvasSize.width,
+      initialCanvasSize.height
+    );
+    // 🆕 启用历史记录（构造函数中默认禁用）
+    managerRef.current.setLoadingTemplate(false);
 
     console.log('🔍 初始化加载:', {
       版本数量: allVersions.length,
       所有版本: allVersions.map(v => ({ id: v.id, name: v.name, updatedAt: new Date(v.updatedAt).toLocaleString() })),
       当前激活版本: activeVersion ? { id: activeVersion.id, name: activeVersion.name, updatedAt: new Date(activeVersion.updatedAt).toLocaleString() } : null,
+      初始画布尺寸: `${initialCanvasSize.width}×${initialCanvasSize.height}`,
     });
 
     setVersions(allVersions);
@@ -606,10 +632,12 @@ export default function Home() {
         }
 
         const data = managerRef.current.toJSON();
-        versionRef.current.update(activeId, data);
+        const currentCanvasSize = canvasSizeRef.current;
+        versionRef.current.update(activeId, data, undefined, currentCanvasSize);
         console.log('💾 页面卸载前保存:', {
           版本ID: activeId,
           数据大小: data.length,
+          画布尺寸: `${currentCanvasSize.width}×${currentCanvasSize.height}`,
         });
       }
     };
@@ -640,7 +668,7 @@ export default function Home() {
         if (data !== lastSavedData) {
           try {
             // 自动保存时不保存缩略图，减少 localStorage 占用
-            versionRef.current.update(activeId, data);
+            versionRef.current.update(activeId, data, undefined, canvasSizeRef.current);
             lastSavedData = data;
             // 🔇 降低日志级别，避免控制台刷屏
             if (process.env.NODE_ENV === 'development') {
@@ -911,11 +939,12 @@ export default function Home() {
 
     const currentData = managerRef.current.toJSON();
     const currentThumbnail = managerRef.current.toThumbnail();
-    versionRef.current.update(activeId, currentData, currentThumbnail);
+    versionRef.current.update(activeId, currentData, currentThumbnail, canvasSizeRef.current);
 
     console.log('💾 保存当前版本:', {
       版本ID: activeId,
       数据长度: currentData.length,
+      画布尺寸: `${canvasSizeRef.current.width}×${canvasSizeRef.current.height}`,
       数据预览: currentData.substring(0, 100),
     });
 
@@ -933,6 +962,11 @@ export default function Home() {
     });
 
     if (version) {
+      const nextCanvasSize = normalizeCanvasSize(version.canvasSize);
+      canvasSizeRef.current = nextCanvasSize;
+      setCanvasSize(nextCanvasSize);
+      managerRef.current.resize(nextCanvasSize.width, nextCanvasSize.height);
+
       // 如果版本数据为空，清空画布；否则加载数据
       if (!version.data || version.data === '') {
         console.log('📄 新建空白画布');
@@ -954,7 +988,7 @@ export default function Home() {
 
   const createNewVersion = () => {
     if (!versionRef.current) return;
-    const newVersion = versionRef.current.create(`画布 ${versions.length + 1}`);
+    const newVersion = versionRef.current.create(`画布 ${versions.length + 1}`, canvasSizeRef.current);
     setVersions(versionRef.current.getAll());
     switchVersion(newVersion.id);
   };
@@ -962,7 +996,7 @@ export default function Home() {
   const duplicateVersion = () => {
     if (!managerRef.current || !versionRef.current) return;
     const data = managerRef.current.toJSON();
-    const newVersion = versionRef.current.duplicate(activeId, data);
+    const newVersion = versionRef.current.duplicate(activeId, data, canvasSizeRef.current);
     setVersions(versionRef.current.getAll());
     switchVersion(newVersion.id);
   };
@@ -1406,34 +1440,11 @@ export default function Home() {
       数据长度: currentData.length,
     });
 
+    canvasSizeRef.current = newSize;
     setCanvasSize(newSize);
 
-    managerRef.current.dispose();
-    if (canvasRef.current) {
-      managerRef.current = new CanvasManager(
-        canvasRef.current,
-        newSize.width,
-        newSize.height
-      );
-
-      // 🆕 如果需要加载数据，加载并自动启用历史记录
-      if (currentData && currentData.length > 100) { // 检查数据是否有效（不是空 JSON）
-        managerRef.current.loadFromJSON(currentData); // 默认会启用历史记录
-      } else {
-        // 没有数据要加载，直接启用历史记录
-        managerRef.current.setLoadingTemplate(false);
-      }
-
-      managerRef.current.canvas.on('selection:created', (e) => {
-        setSelectedObject(e.selected?.[0]);
-      });
-      managerRef.current.canvas.on('selection:updated', (e) => {
-        setSelectedObject(e.selected?.[0]);
-      });
-      managerRef.current.canvas.on('selection:cleared', () => {
-        setSelectedObject(null);
-      });
-    }
+    managerRef.current.resize(newSize.width, newSize.height);
+    versionRef.current?.update(activeId, currentData, undefined, newSize);
   };
 
   // 缩放控制
@@ -1494,6 +1505,7 @@ export default function Home() {
       };
 
       // 更新画布尺寸
+      canvasSizeRef.current = newCanvasSize;
       setCanvasSize(newCanvasSize);
 
       // 重新创建 CanvasManager
@@ -1571,7 +1583,7 @@ export default function Home() {
           try {
             console.log('💾 开始保存到版本历史...');
             const canvasJSON = managerRef.current.toJSON();
-            versionRef.current.update(activeId, canvasJSON);
+            versionRef.current.update(activeId, canvasJSON, undefined, newCanvasSize);
             console.log('✅ 模板应用后已保存到版本历史');
           } catch (error) {
             console.error('❌ 保存版本历史失败:', error);
