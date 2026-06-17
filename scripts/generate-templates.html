@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>生成小红书风格模板</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    .canvas-wrapper {
+      display: inline-block;
+      margin: 20px;
+      background: white;
+      padding: 10px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    h2 {
+      margin-top: 0;
+      font-size: 14px;
+      color: #666;
+    }
+    button {
+      margin: 10px 5px;
+      padding: 10px 20px;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #45a049;
+    }
+    .output {
+      margin-top: 20px;
+      padding: 20px;
+      background: white;
+      border-radius: 8px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    pre {
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>小红书风格模板生成器</h1>
+    <p>点击按钮生成模板 JSON，然后复制到 preset-templates.ts 中</p>
+
+    <button onclick="generateTemplate1()">1. 便签纸风格（黄色）</button>
+    <button onclick="generateTemplate2()">2. 引用卡片风格（蓝色）</button>
+    <button onclick="generateTemplate3()">3. 极简文字风格（白色）</button>
+    <button onclick="generateTemplate4()">4. 便签纸风格（粉色）</button>
+    <button onclick="generateTemplate5()">5. 引用卡片风格（绿色）</button>
+
+    <div class="canvas-wrapper">
+      <h2>预览</h2>
+      <canvas id="canvas" width="1242" height="1660"></canvas>
+    </div>
+
+    <div class="output">
+      <h2>生成的 JSON（复制下面的内容）</h2>
+      <pre id="output"></pre>
+    </div>
+  </div>
+
+  <script>
+    const canvas = new fabric.Canvas('canvas', {
+      backgroundColor: '#ffffff',
+    });
+
+    // 模板1：便签纸风格（黄色）
+    function generateTemplate1() {
+      canvas.clear();
+      canvas.setBackgroundColor('#FFFBEA', canvas.renderAll.bind(canvas));
+
+      // 横线装饰（模拟便签纸）
+      for (let i = 0; i < 20; i++) {
+        const line = new fabric.Line([0, 100 + i * 80, 1242, 100 + i * 80], {
+          stroke: '#E5E5E5',
+          strokeWidth: 1,
+          selectable: false,
+          evented: false,
+        });
+        canvas.add(line);
+      }
+
+      // 日期标签
+      const dateLabel = new fabric.IText('Date: __.__', {
+        left: 80,
+        top: 50,
+        fontSize: 32,
+        fontFamily: 'Arial',
+        fill: '#666666',
+      });
+      canvas.add(dateLabel);
+
+      // 主标题（带荧光笔效果）
+      const title = new fabric.IText('点击修改标题文字', {
+        left: 120,
+        top: 280,
+        fontSize: 72,
+        fontFamily: 'STKaiti, KaiTi, serif',
+        fontWeight: 'bold',
+        fill: '#000000',
+        lineHeight: 1.4,
+      });
+      canvas.add(title);
+
+      // 荧光笔背景
+      const highlight = new fabric.Rect({
+        left: 100,
+        top: 270,
+        width: 1000,
+        height: 220,
+        fill: '#FFE066',
+        opacity: 0.4,
+        selectable: false,
+        evented: false,
+      });
+      canvas.sendToBack(highlight);
+
+      // 简笔画表情（右下角）
+      const emoji = new fabric.IText('🤔', {
+        left: 1050,
+        top: 1500,
+        fontSize: 80,
+      });
+      canvas.add(emoji);
+
+      outputJSON('便签纸风格（黄色）');
+    }
+
+    // 模板2：引用卡片风格（蓝色）
+    function generateTemplate2() {
+      canvas.clear();
+      canvas.setBackgroundColor('#E3F2FD', canvas.renderAll.bind(canvas));
+
+      // 圆角卡片
+      const card = new fabric.Rect({
+        left: 80,
+        top: 80,
+        width: 1082,
+        height: 1500,
+        fill: 'rgba(255, 255, 255, 0.7)',
+        rx: 40,
+        ry: 40,
+        selectable: false,
+        evented: false,
+      });
+      canvas.add(card);
+
+      // 引号装饰
+      const quote = new fabric.IText('"', {
+        left: 150,
+        top: 150,
+        fontSize: 120,
+        fontFamily: 'Georgia, serif',
+        fill: '#90CAF9',
+        fontWeight: 'bold',
+      });
+      canvas.add(quote);
+
+      // 主文字
+      const text = new fabric.IText('点击修改文字内容\n可以多行显示', {
+        left: 150,
+        top: 350,
+        fontSize: 68,
+        fontFamily: 'STHeiti, SimHei, sans-serif',
+        fill: '#333333',
+        lineHeight: 1.5,
+      });
+      canvas.add(text);
+
+      // 关键词下划线
+      const underline = new fabric.Line([150, 500, 450, 500], {
+        stroke: '#FF4081',
+        strokeWidth: 6,
+      });
+      canvas.add(underline);
+
+      // 装饰短线（右下角）
+      const decorLine = new fabric.Line([950, 1450, 1050, 1450], {
+        stroke: '#90CAF9',
+        strokeWidth: 8,
+        selectable: false,
+        evented: false,
+      });
+      canvas.add(decorLine);
+
+      outputJSON('引用卡片风格（蓝色）');
+    }
+
+    // 模板3：极简文字风格（白色）
+    function generateTemplate3() {
+      canvas.clear();
+      canvas.setBackgroundColor('#FFFFFF', canvas.renderAll.bind(canvas));
+
+      // 超大标题
+      const title = new fabric.IText('点击修改\n标题文字', {
+        left: 120,
+        top: 400,
+        fontSize: 96,
+        fontFamily: 'STKaiti, KaiTi, serif',
+        fontWeight: 'bold',
+        fill: '#2C3E50',
+        lineHeight: 1.3,
+      });
+      canvas.add(title);
+
+      // 关键词方框高亮
+      const box = new fabric.Rect({
+        left: 110,
+        top: 550,
+        width: 280,
+        height: 120,
+        fill: 'transparent',
+        stroke: '#4CAF50',
+        strokeWidth: 6,
+        rx: 8,
+        ry: 8,
+      });
+      canvas.add(box);
+
+      outputJSON('极简文字风格（白色）');
+    }
+
+    // 模板4：便签纸风格（粉色）
+    function generateTemplate4() {
+      canvas.clear();
+      canvas.setBackgroundColor('#FFF0F5', canvas.renderAll.bind(canvas));
+
+      // 横线装饰
+      for (let i = 0; i < 20; i++) {
+        const line = new fabric.Line([0, 100 + i * 80, 1242, 100 + i * 80], {
+          stroke: '#FFD6E7',
+          strokeWidth: 1,
+          selectable: false,
+          evented: false,
+        });
+        canvas.add(line);
+      }
+
+      // 顶部标签
+      const header = new fabric.IText('Info Doc.    Encyclopedia    •    •', {
+        left: 400,
+        top: 30,
+        fontSize: 24,
+        fontFamily: 'Arial',
+        fill: '#999999',
+        selectable: false,
+        evented: false,
+      });
+      canvas.add(header);
+
+      // 主标题
+      const title = new fabric.IText('点击修改标题，\n可以换行显示！', {
+        left: 120,
+        top: 300,
+        fontSize: 76,
+        fontFamily: 'STHeiti, SimHei, sans-serif',
+        fontWeight: 'bold',
+        fill: '#000000',
+        lineHeight: 1.4,
+      });
+      canvas.add(title);
+
+      // 粉色荧光笔
+      const highlight = new fabric.Rect({
+        left: 100,
+        top: 420,
+        width: 600,
+        height: 100,
+        fill: '#FFB6D9',
+        opacity: 0.5,
+        selectable: false,
+        evented: false,
+      });
+      canvas.sendToBack(highlight);
+
+      // 底部小字
+      const footer = new fabric.IText('Source / Xiaohongshu', {
+        left: 900,
+        top: 1600,
+        fontSize: 20,
+        fontFamily: 'Arial',
+        fill: '#CCCCCC',
+        selectable: false,
+        evented: false,
+      });
+      canvas.add(footer);
+
+      outputJSON('便签纸风格（粉色）');
+    }
+
+    // 模板5：引用卡片风格（绿色）
+    function generateTemplate5() {
+      canvas.clear();
+      canvas.setBackgroundColor('#E8F5E9', canvas.renderAll.bind(canvas));
+
+      // 圆角卡片
+      const card = new fabric.Rect({
+        left: 80,
+        top: 80,
+        width: 1082,
+        height: 1500,
+        fill: 'rgba(255, 255, 255, 0.8)',
+        rx: 40,
+        ry: 40,
+        selectable: false,
+        evented: false,
+      });
+      canvas.add(card);
+
+      // 引号装饰
+      const quote = new fabric.IText('"', {
+        left: 150,
+        top: 120,
+        fontSize: 100,
+        fontFamily: 'Georgia, serif',
+        fill: '#C8E6C9',
+        fontWeight: 'bold',
+        selectable: false,
+        evented: false,
+      });
+      canvas.add(quote);
+
+      // 主文字
+      const text = new fabric.IText('点击修改文字内容\n（可以多行）', {
+        left: 150,
+        top: 350,
+        fontSize: 64,
+        fontFamily: 'STHeiti, SimHei, sans-serif',
+        fill: '#2E7D32',
+        lineHeight: 1.5,
+      });
+      canvas.add(text);
+
+      // 装饰短线
+      const decorLine = new fabric.Line([950, 1450, 1050, 1450], {
+        stroke: '#81C784',
+        strokeWidth: 8,
+        selectable: false,
+        evented: false,
+      });
+      canvas.add(decorLine);
+
+      outputJSON('引用卡片风格（绿色）');
+    }
+
+    function outputJSON(name) {
+      const json = canvas.toJSON();
+      const output = document.getElementById('output');
+      output.textContent = `// ${name}\n` + JSON.stringify(json, null, 2);
+      console.log(`${name} JSON:`, json);
+    }
+  </script>
+</body>
+</html>
