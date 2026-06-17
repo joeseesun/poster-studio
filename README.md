@@ -36,7 +36,7 @@ npm run dev
 应用支持在设置弹窗中切换 AI 生图服务商预设：
 
 - **HiAPI**：默认端点 `https://api.hiapi.ai/v1/images/generations`，默认模型 `qwen-image-2.0`
-- **即梦 API**：默认端点 `https://api.qiaomu.ai/jimeng-auth/v1/images/generations`，默认模型 `jimeng-4.5`
+- **即梦 API**：默认端点 `https://api.qiaomu.ai/jimeng-auth/v1/images/generations`，默认模型 `jimeng-5.0`，线上版由乔木服务端内置
 - **火山方舟 / Seedream**：保留现有 Seedream 兼容请求格式
 - **自定义兼容接口**：手动填写 Endpoint、Model ID、认证方式和请求格式
 
@@ -47,12 +47,12 @@ NEXT_PUBLIC_SITE_URL=https://ps.qiaomu.ai
 NEXT_PUBLIC_UMAMI_SRC=https://umami.qiaomu.ai/script.js
 NEXT_PUBLIC_UMAMI_WEBSITE_ID=your_umami_website_id
 
-AI_IMAGE_PROVIDER_ID=hiapi
-AI_IMAGE_API_KEY=your_api_key
-AI_IMAGE_API_ENDPOINT=https://api.hiapi.ai/v1/images/generations
-AI_IMAGE_MODEL_ID=qwen-image-2.0
-AI_IMAGE_AUTH_HEADER=bearer
-AI_IMAGE_REQUEST_FORMAT=openai-image
+AI_IMAGE_PROVIDER_ID=jimeng
+JIMENG_API_KEY=your_server_side_jimeng_key
+JIMENG_API_ENDPOINT=https://api.qiaomu.ai/jimeng-auth/v1/images/generations
+JIMENG_MODEL_ID=jimeng-5.0
+JIMENG_AUTH_HEADER=x-api-key
+JIMENG_REQUEST_FORMAT=jimeng
 ```
 
 图片上传、AI 生成图转存、分享图和去背景结果会通过服务端七牛上传接口处理，需要配置：

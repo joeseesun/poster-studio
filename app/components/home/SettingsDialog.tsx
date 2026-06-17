@@ -15,6 +15,7 @@ import {
   AIRequestFormat,
   DEFAULT_AI_PROVIDER_ID,
   getAIProviderPreset,
+  isBuiltInAIProvider,
   isAIAuthHeader,
   isAIProviderId,
   isAIRequestFormat,
@@ -28,6 +29,9 @@ interface SettingsDialogProps {
 // 检查是否已配置 API Key
 export function hasApiKeyConfigured(): boolean {
   if (typeof window === 'undefined') return false;
+  const providerId = localStorage.getItem(AI_PROVIDER_STORAGE_KEYS.providerId);
+  if (isBuiltInAIProvider(providerId)) return true;
+
   const apiKey = localStorage.getItem(AI_PROVIDER_STORAGE_KEYS.apiKey);
   return !!(apiKey && apiKey.trim());
 }
@@ -47,6 +51,7 @@ export default function SettingsDialog({ isOpen, onClose }: SettingsDialogProps)
   const [authHeader, setAuthHeader] = useState<AIAuthHeader>('bearer');
   const [requestFormat, setRequestFormat] = useState<AIRequestFormat>('seedream');
   const [removeBgApiKey, setRemoveBgApiKey] = useState('');
+  const isBuiltInProvider = isBuiltInAIProvider(providerId);
 
   useEffect(() => {
     if (isOpen) {
@@ -82,7 +87,7 @@ export default function SettingsDialog({ isOpen, onClose }: SettingsDialogProps)
   const handleSaveSettings = () => {
     localStorage.setItem(AI_PROVIDER_STORAGE_KEYS.providerId, providerId);
 
-    if (apiKey.trim()) {
+    if (!isBuiltInProvider && apiKey.trim()) {
       localStorage.setItem(AI_PROVIDER_STORAGE_KEYS.apiKey, apiKey);
     } else {
       localStorage.removeItem(AI_PROVIDER_STORAGE_KEYS.apiKey);
@@ -190,19 +195,22 @@ export default function SettingsDialog({ isOpen, onClose }: SettingsDialogProps)
                 value={modelId}
                 onChange={(e) => setModelId(e.target.value)}
                 placeholder={getAIProviderPreset(providerId).modelId || '输入模型 ID'}
+                disabled={isBuiltInProvider}
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="api-key">API Key *</Label>
-              <Input
-                id="api-key"
-                type="password"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                placeholder="输入你的 API Key"
-              />
-            </div>
+            {!isBuiltInProvider && (
+              <div className="space-y-2">
+                <Label htmlFor="api-key">API Key *</Label>
+                <Input
+                  id="api-key"
+                  type="password"
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  placeholder="输入你的 API Key"
+                />
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="api-endpoint">API 端点</Label>
@@ -212,6 +220,7 @@ export default function SettingsDialog({ isOpen, onClose }: SettingsDialogProps)
                 value={apiEndpoint}
                 onChange={(e) => setApiEndpoint(e.target.value)}
                 placeholder={getAIProviderPreset(providerId).endpoint || 'https://api.example.com/v1/images/generations'}
+                disabled={isBuiltInProvider}
               />
             </div>
 
@@ -223,6 +232,7 @@ export default function SettingsDialog({ isOpen, onClose }: SettingsDialogProps)
                   value={authHeader}
                   onChange={(e) => setAuthHeader(e.target.value as AIAuthHeader)}
                   className="h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none transition-[color,box-shadow] focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
+                  disabled={isBuiltInProvider}
                 >
                   {AI_AUTH_HEADER_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -239,6 +249,7 @@ export default function SettingsDialog({ isOpen, onClose }: SettingsDialogProps)
                   value={requestFormat}
                   onChange={(e) => setRequestFormat(e.target.value as AIRequestFormat)}
                   className="h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none transition-[color,box-shadow] focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
+                  disabled={isBuiltInProvider}
                 >
                   {AI_REQUEST_FORMAT_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
