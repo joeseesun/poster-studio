@@ -52,6 +52,8 @@ export default function SettingsDialog({ isOpen, onClose }: SettingsDialogProps)
   const [requestFormat, setRequestFormat] = useState<AIRequestFormat>('seedream');
   const [removeBgApiKey, setRemoveBgApiKey] = useState('');
   const isBuiltInProvider = isBuiltInAIProvider(providerId);
+  const activeProvider = getAIProviderPreset(providerId);
+  const modelOptions = activeProvider.modelOptions || [];
 
   useEffect(() => {
     if (isOpen) {
@@ -60,7 +62,10 @@ export default function SettingsDialog({ isOpen, onClose }: SettingsDialogProps)
       const provider = getAIProviderPreset(nextProviderId);
       const savedApiKey = localStorage.getItem(AI_PROVIDER_STORAGE_KEYS.apiKey) || '';
       const savedEndpoint = localStorage.getItem(AI_PROVIDER_STORAGE_KEYS.apiEndpoint) || provider.endpoint;
-      const savedModelId = localStorage.getItem(AI_PROVIDER_STORAGE_KEYS.modelId) || provider.modelId;
+      const storedModelId = localStorage.getItem(AI_PROVIDER_STORAGE_KEYS.modelId);
+      const savedModelId = provider.modelOptions?.length
+        ? provider.modelOptions.find((option) => option.value === storedModelId)?.value || provider.modelId
+        : storedModelId || provider.modelId;
       const savedAuthHeader = localStorage.getItem(AI_PROVIDER_STORAGE_KEYS.authHeader);
       const savedRequestFormat = localStorage.getItem(AI_PROVIDER_STORAGE_KEYS.requestFormat);
       const savedRemoveBgApiKey = localStorage.getItem('removebg_api_key') || '';
@@ -189,14 +194,34 @@ export default function SettingsDialog({ isOpen, onClose }: SettingsDialogProps)
 
             <div className="space-y-2">
               <Label htmlFor="model-id">模型 ID *</Label>
-              <Input
-                id="model-id"
-                type="text"
-                value={modelId}
-                onChange={(e) => setModelId(e.target.value)}
-                placeholder={getAIProviderPreset(providerId).modelId || '输入模型 ID'}
-                disabled={isBuiltInProvider}
-              />
+              {modelOptions.length > 0 ? (
+                <select
+                  id="model-id"
+                  value={modelId || activeProvider.modelId}
+                  onChange={(e) => setModelId(e.target.value)}
+                  className="h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none transition-[color,box-shadow] focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
+                >
+                  {modelOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <Input
+                  id="model-id"
+                  type="text"
+                  value={modelId}
+                  onChange={(e) => setModelId(e.target.value)}
+                  placeholder={activeProvider.modelId || '输入模型 ID'}
+                  disabled={isBuiltInProvider}
+                />
+              )}
+              {modelOptions.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  {modelOptions.find((option) => option.value === (modelId || activeProvider.modelId))?.description || activeProvider.description}
+                </p>
+              )}
             </div>
 
             {!isBuiltInProvider && (
@@ -219,7 +244,7 @@ export default function SettingsDialog({ isOpen, onClose }: SettingsDialogProps)
                 type="url"
                 value={apiEndpoint}
                 onChange={(e) => setApiEndpoint(e.target.value)}
-                placeholder={getAIProviderPreset(providerId).endpoint || 'https://api.example.com/v1/images/generations'}
+                placeholder={activeProvider.endpoint || 'https://api.example.com/v1/images/generations'}
                 disabled={isBuiltInProvider}
               />
             </div>

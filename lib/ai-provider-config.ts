@@ -2,12 +2,19 @@ export type AIProviderId = 'volc-seedream' | 'hiapi' | 'jimeng' | 'custom';
 export type AIAuthHeader = 'bearer' | 'x-api-key';
 export type AIRequestFormat = 'seedream' | 'openai-image' | 'jimeng';
 
+export interface AIModelOption {
+  value: string;
+  label: string;
+  description?: string;
+}
+
 export interface AIProviderPreset {
   id: AIProviderId;
   label: string;
   description: string;
   endpoint: string;
   modelId: string;
+  modelOptions?: AIModelOption[];
   authHeader: AIAuthHeader;
   requestFormat: AIRequestFormat;
   docsUrl?: string;
@@ -24,6 +31,24 @@ export const AI_PROVIDER_STORAGE_KEYS = {
 } as const;
 
 export const DEFAULT_AI_PROVIDER_ID: AIProviderId = 'jimeng';
+
+export const JIMENG_MODEL_OPTIONS: AIModelOption[] = [
+  {
+    value: 'jimeng-5.0',
+    label: '即梦 5.0',
+    description: '默认推荐，质量更高。',
+  },
+  {
+    value: 'jimeng-4.5',
+    label: '即梦 4.5',
+    description: '兼容旧版生成链路。',
+  },
+  {
+    value: 'jimeng',
+    label: '即梦默认',
+    description: '由乔木即梦代理选择默认模型。',
+  },
+];
 
 export const AI_PROVIDER_PRESETS: AIProviderPreset[] = [
   {
@@ -52,6 +77,7 @@ export const AI_PROVIDER_PRESETS: AIProviderPreset[] = [
     description: '乔木内置免费服务，默认使用 jimeng-5.0。',
     endpoint: 'https://api.qiaomu.ai/jimeng-auth/v1/images/generations',
     modelId: 'jimeng-5.0',
+    modelOptions: JIMENG_MODEL_OPTIONS,
     authHeader: 'x-api-key',
     requestFormat: 'jimeng',
     builtIn: true,
@@ -116,6 +142,12 @@ export function getAIProviderPreset(providerId?: string | null): AIProviderPrese
 export function isBuiltInAIProvider(providerId?: string | null): boolean {
   const preset = getAIProviderPreset(isAIProviderId(providerId) ? providerId : DEFAULT_AI_PROVIDER_ID);
   return preset.builtIn === true;
+}
+
+export function isAIProviderModelId(providerId: AIProviderId, modelId?: string | null): boolean {
+  const options = getAIProviderPreset(providerId).modelOptions;
+  if (!options?.length) return true;
+  return typeof modelId === 'string' && options.some((option) => option.value === modelId);
 }
 
 export function isAIProviderId(value: string | null | undefined): value is AIProviderId {
