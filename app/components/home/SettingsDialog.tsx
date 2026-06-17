@@ -69,7 +69,8 @@ export default function SettingsDialog({ isOpen, onClose }: SettingsDialogProps)
       const nextProviderId = isAIProviderId(savedProviderId) ? savedProviderId : DEFAULT_AI_PROVIDER_ID;
       const provider = getAIProviderPreset(nextProviderId);
       const savedApiKey = localStorage.getItem(AI_PROVIDER_STORAGE_KEYS.apiKey) || '';
-      const savedEndpoint = localStorage.getItem(AI_PROVIDER_STORAGE_KEYS.apiEndpoint) || provider.endpoint;
+      const storedEndpoint = localStorage.getItem(AI_PROVIDER_STORAGE_KEYS.apiEndpoint) || provider.endpoint;
+      const savedEndpoint = nextProviderId === 'hiapi' ? normalizeHiapiEndpoint(storedEndpoint, provider.endpoint) : storedEndpoint;
       const storedModelId = localStorage.getItem(AI_PROVIDER_STORAGE_KEYS.modelId);
       const savedModelId = provider.modelOptions?.length
         ? provider.modelOptions.find((option) => option.value === storedModelId)?.value || provider.modelId
@@ -83,7 +84,10 @@ export default function SettingsDialog({ isOpen, onClose }: SettingsDialogProps)
       setApiEndpoint(savedEndpoint);
       setModelId(savedModelId);
       setAuthHeader(isAIAuthHeader(savedAuthHeader) ? savedAuthHeader : provider.authHeader);
-      setRequestFormat(isAIRequestFormat(savedRequestFormat) ? savedRequestFormat : provider.requestFormat);
+      setRequestFormat(nextProviderId === 'hiapi'
+        ? 'hiapi-task'
+        : isAIRequestFormat(savedRequestFormat) ? savedRequestFormat : provider.requestFormat
+      );
       setRemoveBgApiKey(savedRemoveBgApiKey);
     }
   }, [isOpen]);
@@ -371,7 +375,7 @@ export default function SettingsDialog({ isOpen, onClose }: SettingsDialogProps)
                   value={requestFormat}
                   onChange={(e) => setRequestFormat(e.target.value as AIRequestFormat)}
                   className="h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none transition-[color,box-shadow] focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
-                  disabled={isBuiltInProvider}
+                  disabled={isBuiltInProvider || providerId === 'hiapi'}
                 >
                   {AI_REQUEST_FORMAT_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -433,4 +437,18 @@ export default function SettingsDialog({ isOpen, onClose }: SettingsDialogProps)
       </DialogContent>
     </Dialog>
   );
+}
+
+function normalizeHiapiEndpoint(endpoint: string, fallback: string): string {
+  const trimmed = endpoint.trim().replace(/\/+$/, '');
+  if (!trimmed) return fallback;
+  if (trimmed.endsWith('/v1/tasks')) return trimmed;
+  if (trimmed.endsWith('/v1/images/generations')) {
+    return `${trimmed.replace(/\/v1\/images\/generations$/i, '')}/v1/tasks`;
+  }
+  if (trimmed.endsWith('/v1')) return `${trimmed}/tasks`;
+  if (trimmed === 'https://api.hiapi.ai' || trimmed === 'https://www.hiapi.ai') {
+    return `${trimmed}/v1/tasks`;
+  }
+  return trimmed;
 }

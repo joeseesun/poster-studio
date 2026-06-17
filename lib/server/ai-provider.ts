@@ -72,12 +72,14 @@ export function resolveAIProviderConfig(body: AIProviderRequestBody): ResolvedAI
       process.env.AI_IMAGE_AUTH_HEADER ||
       preset.authHeader
   );
-  const requestFormat = resolveRequestFormat(
-    (useBuiltInProvider ? '' : body.requestFormat) ||
-      process.env[`${providerEnv}_REQUEST_FORMAT`] ||
-      process.env.AI_IMAGE_REQUEST_FORMAT ||
-      preset.requestFormat
-  );
+  const requestFormat = providerId === 'hiapi'
+    ? 'hiapi-task'
+    : resolveRequestFormat(
+        (useBuiltInProvider ? '' : body.requestFormat) ||
+          process.env[`${providerEnv}_REQUEST_FORMAT`] ||
+          process.env.AI_IMAGE_REQUEST_FORMAT ||
+          preset.requestFormat
+      );
 
   if (!apiKey) {
     if (useBuiltInProvider) {
