@@ -28,7 +28,7 @@ export default function WeChatDialog({ isOpen, onClose }: WeChatDialogProps) {
                 className="w-full h-full object-contain p-2"
               />
             </div>
-            <p className="text-sm font-medium">向阳乔木</p>
+            <p className="text-sm font-medium">向阳乔木推荐看</p>
           </div>
 
           <p className="text-center text-sm text-muted-foreground">
