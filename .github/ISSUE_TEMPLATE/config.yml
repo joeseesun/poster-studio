@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Live demo
+    url: https://ps.qiaomu.ai
+    about: Try the hosted Qiaomu Poster Studio.
+  - name: Qiaomu AI tools directory
+    url: https://tuijian.qiaomu.ai
+    about: More tools and projects by Qiaomu.

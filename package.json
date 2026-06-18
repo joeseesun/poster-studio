@@ -2,6 +2,24 @@
   "name": "poster-studio",
   "version": "0.1.0",
   "private": true,
+  "description": "Qiaomu Poster Studio: browser-based poster, cover, and social graphic editor for Xiaohongshu and knowledge cards.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/joeseesun/poster-studio.git"
+  },
+  "homepage": "https://ps.qiaomu.ai",
+  "bugs": {
+    "url": "https://github.com/joeseesun/poster-studio/issues"
+  },
+  "keywords": [
+    "poster-studio",
+    "xiaohongshu",
+    "nextjs",
+    "fabricjs",
+    "ai-image",
+    "qiaomu"
+  ],
   "scripts": {
     "dev": "next dev",
     "build": "next build",
