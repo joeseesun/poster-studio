@@ -5,6 +5,7 @@ import {
   resolveAIProviderConfig,
 } from '@/lib/server/ai-provider';
 import { persistRemoteImageToQiniu } from '@/lib/server/qiniu';
+import { checkBuiltInAIRequestAccess } from '@/lib/server/ai-image-access';
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,6 +23,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'Image is required' },
         { status: 400 }
+      );
+    }
+
+    const access = checkBuiltInAIRequestAccess(request, body);
+    if (!access.allowed) {
+      return NextResponse.json(
+        { error: access.error || '内置 AI 生图服务暂不可用' },
+        { status: access.status || 403, headers: access.headers }
       );
     }
 
@@ -49,15 +58,18 @@ export async function POST(request: NextRequest) {
       'xhs-cover'
     );
 
-    return NextResponse.json({
-      data: [
-        {
-          url: persisted.url,
-          original_url: persisted.originalUrl,
-          persisted: persisted.persisted,
-        },
-      ],
-    });
+    return NextResponse.json(
+      {
+        data: [
+          {
+            url: persisted.url,
+            original_url: persisted.originalUrl,
+            persisted: persisted.persisted,
+          },
+        ],
+      },
+      { headers: access.headers }
+    );
   } catch (error) {
     console.error('图片转换 API 错误:', error);
     return NextResponse.json(

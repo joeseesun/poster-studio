@@ -18,9 +18,10 @@ import {
   DEFAULT_AI_PROVIDER_ID,
   getAIProviderPreset,
   isBuiltInAIProvider,
+  isBuiltInAIProviderEnabled,
   isAIAuthHeader,
-  isAIProviderId,
   isAIRequestFormat,
+  resolveBrowserAIProviderId,
 } from '@/lib/ai-provider-config';
 
 interface SettingsDialogProps {
@@ -31,8 +32,8 @@ interface SettingsDialogProps {
 // 检查是否已配置 API Key
 export function hasApiKeyConfigured(): boolean {
   if (typeof window === 'undefined') return false;
-  const providerId = localStorage.getItem(AI_PROVIDER_STORAGE_KEYS.providerId);
-  if (isBuiltInAIProvider(providerId)) return true;
+  const providerId = resolveBrowserAIProviderId(localStorage.getItem(AI_PROVIDER_STORAGE_KEYS.providerId));
+  if (isBuiltInAIProvider(providerId)) return isBuiltInAIProviderEnabled(providerId);
 
   const apiKey = localStorage.getItem(AI_PROVIDER_STORAGE_KEYS.apiKey);
   return !!(apiKey && apiKey.trim());
@@ -64,7 +65,7 @@ export default function SettingsDialog({ isOpen, onClose }: SettingsDialogProps)
   useEffect(() => {
     if (isOpen) {
       const savedProviderId = localStorage.getItem(AI_PROVIDER_STORAGE_KEYS.providerId);
-      const nextProviderId = isAIProviderId(savedProviderId) ? savedProviderId : DEFAULT_AI_PROVIDER_ID;
+      const nextProviderId = resolveBrowserAIProviderId(savedProviderId);
       const provider = getAIProviderPreset(nextProviderId);
       const savedApiKey = localStorage.getItem(AI_PROVIDER_STORAGE_KEYS.apiKey) || '';
       const storedEndpoint = localStorage.getItem(AI_PROVIDER_STORAGE_KEYS.apiEndpoint) || provider.endpoint;
@@ -230,25 +231,29 @@ export default function SettingsDialog({ isOpen, onClose }: SettingsDialogProps)
             <div className="space-y-2">
               <Label>服务商预设</Label>
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                {AI_PROVIDER_PRESETS.map((provider) => (
-                  <button
-                    key={provider.id}
-                    type="button"
-                    onClick={() => handleProviderChange(provider.id)}
-                    className={`rounded-md border px-3 py-2 text-left transition-colors ${
-                      providerId === provider.id
-                        ? 'border-gray-900 bg-gray-900 text-white'
-                        : 'border-gray-200 bg-white text-gray-700 hover:border-gray-900'
-                    }`}
-                  >
-                    <span className="block text-sm font-medium">{provider.label}</span>
-                    <span className={`mt-1 block text-xs leading-4 ${
-                      providerId === provider.id ? 'text-gray-200' : 'text-gray-500'
-                    }`}>
-                      {provider.description}
-                    </span>
-                  </button>
-                ))}
+                {AI_PROVIDER_PRESETS.map((provider) => {
+                  const isUnavailable = provider.builtIn && !isBuiltInAIProviderEnabled(provider.id);
+                  return (
+                    <button
+                      key={provider.id}
+                      type="button"
+                      onClick={() => !isUnavailable && handleProviderChange(provider.id)}
+                      disabled={isUnavailable}
+                      className={`rounded-md border px-3 py-2 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-55 ${
+                        providerId === provider.id
+                          ? 'border-gray-900 bg-gray-900 text-white'
+                          : 'border-gray-200 bg-white text-gray-700 hover:border-gray-900 disabled:hover:border-gray-200'
+                      }`}
+                    >
+                      <span className="block text-sm font-medium">{provider.label}</span>
+                      <span className={`mt-1 block text-xs leading-4 ${
+                        providerId === provider.id ? 'text-gray-200' : 'text-gray-500'
+                      }`}>
+                        {isUnavailable ? '服务端未启用，请使用自有 API 配置。' : provider.description}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 

@@ -5,6 +5,7 @@ import {
   getAIImageJob,
   validateAIImageJobInput,
 } from '@/lib/server/ai-image-jobs';
+import { checkBuiltInAIRequestAccess } from '@/lib/server/ai-image-access';
 
 export const runtime = 'nodejs';
 
@@ -20,8 +21,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const access = checkBuiltInAIRequestAccess(request, body);
+    if (!access.allowed) {
+      return NextResponse.json(
+        { error: access.error || '内置 AI 生图服务暂不可用' },
+        { status: access.status || 403, headers: access.headers }
+      );
+    }
+
     const job = createAIImageJob('image-to-image', body);
-    return NextResponse.json({ job }, { status: 202 });
+    return NextResponse.json({ job }, { status: 202, headers: access.headers });
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Internal server error' },
