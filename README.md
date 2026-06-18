@@ -8,7 +8,7 @@
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fjoeseesun%2Fposter-studio&project-name=poster-studio&repository-name=poster-studio)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-![乔木画布预览](public/templates/%E5%BC%95%E7%94%A8%E5%8D%A1%E7%89%87-1280%C3%97720.png)
+![乔木画布产品界面预览](docs/assets/poster-studio-preview.png)
 
 **中文** | [English](#english)
 
