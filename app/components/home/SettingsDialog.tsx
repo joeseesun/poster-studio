@@ -38,11 +38,9 @@ export function hasApiKeyConfigured(): boolean {
   return !!(apiKey && apiKey.trim());
 }
 
-// 检查是否已配置 Remove.bg API Key
+// Remove.bg 默认有服务端内置配置；用户可选填自己的 Key 覆盖。
 export function hasRemoveBgApiKeyConfigured(): boolean {
-  if (typeof window === 'undefined') return false;
-  const apiKey = localStorage.getItem('removebg_api_key');
-  return !!(apiKey && apiKey.trim());
+  return true;
 }
 
 export default function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
@@ -405,16 +403,16 @@ export default function SettingsDialog({ isOpen, onClose }: SettingsDialogProps)
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="removebg-api-key">API Key</Label>
+              <Label htmlFor="removebg-api-key">自有 API Key（可选）</Label>
               <Input
                 id="removebg-api-key"
                 type="password"
                 value={removeBgApiKey}
                 onChange={(e) => setRemoveBgApiKey(e.target.value)}
-                placeholder="输入你的 Remove.bg API Key"
+                placeholder="默认使用乔木内置服务"
               />
               <p className="text-xs text-muted-foreground">
-                用于一键去除图片背景功能
+                不填写时使用乔木服务端内置 Remove.bg；填写后会优先使用你自己的 Key。
               </p>
             </div>
           </div>

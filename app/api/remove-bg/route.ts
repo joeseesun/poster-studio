@@ -4,6 +4,8 @@ import { uploadBlobToQiniu } from '@/lib/server/qiniu';
 export async function POST(request: NextRequest) {
   try {
     const { imageUrl, apiKey } = await request.json();
+    const resolvedApiKey = clean(apiKey) || clean(process.env.REMOVE_BG_API_KEY) || clean(process.env.REMOVEBG_API_KEY);
+    const keySource = clean(apiKey) ? 'user' : 'server';
 
     if (!imageUrl) {
       return NextResponse.json(
@@ -12,14 +14,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!apiKey) {
+    if (!resolvedApiKey) {
       return NextResponse.json(
-        { error: '缺少 Remove.bg API Key' },
-        { status: 400 }
+        { error: '服务端未配置 Remove.bg API Key，可在设置中填写自己的 Key 后重试' },
+        { status: 500 }
       );
     }
 
-    console.log('🎨 开始去除背景:', imageUrl);
+    console.log('🎨 开始去除背景:', { imageUrl, keySource });
 
     // 1. 调用 Remove.bg API
     const formData = new FormData();
@@ -29,7 +31,7 @@ export async function POST(request: NextRequest) {
     const removeBgResponse = await fetch('https://api.remove.bg/v1.0/removebg', {
       method: 'POST',
       headers: {
-        'X-API-Key': apiKey,
+        'X-API-Key': resolvedApiKey,
       },
       body: formData,
     });
@@ -78,4 +80,8 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+function clean(value: unknown): string {
+  return typeof value === 'string' ? value.trim() : '';
 }

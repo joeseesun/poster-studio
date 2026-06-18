@@ -64,6 +64,12 @@ QINIU_BUCKET=your_bucket
 QINIU_DOMAIN=https://your-cdn-domain.example.com
 ```
 
+Remove.bg 默认可由服务端统一内置，用户也可以在设置里填自己的 Key 覆盖：
+
+```bash
+REMOVE_BG_API_KEY=your_removebg_key
+```
+
 分享链接、公开模板和公开素材会优先使用 Vercel KV 兼容的 REST 环境变量：
 
 ```bash

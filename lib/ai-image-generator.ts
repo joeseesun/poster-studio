@@ -5,10 +5,11 @@ import {
   isAIProviderModelId,
   isBuiltInAIProvider,
 } from './ai-provider-config';
+import { createAndPollAIImageJob } from './ai-image-job-client';
 
 // AI 生图服务
 export class AIImageGenerator {
-  private apiUrl = '/api/ai-image'; // 使用本地 API 路由，避免 CORS 问题
+  private apiUrl = '/api/ai-image/jobs'; // 使用后台任务路由，避免长连接中断
 
   // 从 localStorage 获取配置
   private getConfig() {
@@ -45,39 +46,16 @@ export class AIImageGenerator {
         hasCustomConfig: !!(config.apiKey || config.apiEndpoint || config.modelId)
       });
 
-      const response = await fetch(this.apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      const imageUrl = await createAndPollAIImageJob(
+        this.apiUrl,
+        {
           prompt: prompt,
           size: size,
           ...config, // 传递自定义配置
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: response.statusText }));
-        console.error('❌ 生成图片失败:', {
-          status: response.status,
-          statusText: response.statusText,
-          error: errorData,
-        });
-        throw new Error(errorData.error || `生成图片失败 (${response.status})`);
-      }
-
-      const result = await response.json();
-
-      // 提取图片 URL
-      if (result.data && result.data.length > 0 && result.data[0].url) {
-        const imageUrl = result.data[0].url;
-        console.log('✅ 图片生成成功:', imageUrl);
-        return imageUrl;
-      } else {
-        console.error('❌ 返回数据格式错误:', result);
-        throw new Error('返回数据中没有图片 URL');
-      }
+        }
+      );
+      console.log('✅ 图片生成成功:', imageUrl);
+      return imageUrl;
     } catch (error) {
       console.error('❌ AI 生图失败:', error);
       throw error;
