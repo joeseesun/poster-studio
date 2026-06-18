@@ -153,9 +153,9 @@ export const AI_PROVIDER_PRESETS: AIProviderPreset[] = [
   {
     id: 'jimeng',
     label: '即梦 API',
-    description: '服务端内置即梦能力，默认使用 jimeng-5.0。',
+    description: '服务端内置即梦能力，默认使用 jimeng-4.5。',
     endpoint: 'https://api.qiaomu.ai/jimeng-auth/v1/images/generations',
-    modelId: 'jimeng-5.0',
+    modelId: 'jimeng-4.5',
     modelOptions: JIMENG_MODEL_OPTIONS,
     authHeader: 'x-api-key',
     requestFormat: 'jimeng',

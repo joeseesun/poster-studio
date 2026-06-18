@@ -53,7 +53,7 @@ AI_IMAGE_PROVIDER_ID=hiapi
 JIMENG_API_KEY=your_server_side_jimeng_key
 JIMENG_API_ENDPOINT=https://api.qiaomu.ai/jimeng-auth/v1/images/generations
 JIMENG_BUILT_IN_ENABLED=false
-JIMENG_MODEL_ID=jimeng-5.0
+JIMENG_MODEL_ID=jimeng-4.5
 JIMENG_AUTH_HEADER=x-api-key
 JIMENG_REQUEST_FORMAT=jimeng
 ```
