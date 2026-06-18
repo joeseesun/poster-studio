@@ -1129,11 +1129,7 @@ export default function Home() {
     if (!managerRef.current) return;
 
     try {
-      // 获取 API Key
-      const apiKey = localStorage.getItem('removebg_api_key');
-      if (!apiKey) {
-        throw new Error('请先在设置中配置 Remove.bg API Key');
-      }
+      const apiKey = localStorage.getItem('removebg_api_key')?.trim();
 
       console.log('🎨 开始去除背景...', imageUrl);
 
@@ -1152,7 +1148,7 @@ export default function Home() {
         },
         body: JSON.stringify({
           imageUrl,
-          apiKey,
+          apiKey: apiKey || undefined,
         }),
       })
         .then(async (response) => {

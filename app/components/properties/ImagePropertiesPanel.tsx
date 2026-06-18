@@ -5,7 +5,6 @@ import { Slider } from '@/components/ui/slider';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FlipHorizontal, FlipVertical, Plus, Pencil, Trash2, X, ChevronDown, ChevronUp } from 'lucide-react';
-import { hasRemoveBgApiKeyConfigured } from '@/app/components/home/SettingsDialog';
 import { getAITransformPromptsManager, AITransformPrompt } from '@/lib/ai-transform-prompts';
 
 interface ImagePropertiesPanelProps {
@@ -40,7 +39,6 @@ export default function ImagePropertiesPanel({
   onSaturationChange,
   onRemoveBackground,
   onRemoveBackgroundLocal,
-  onOpenSettings,
   onAIImageTransform,
 }: ImagePropertiesPanelProps) {
   const [activeTab, setActiveTab] = useState('basic');
@@ -392,16 +390,6 @@ export default function ImagePropertiesPanel({
                 variant="outline"
                 size="sm"
                 onClick={async () => {
-                  // 检查是否配置了 API Key
-                  if (!hasRemoveBgApiKeyConfigured()) {
-                    if (onOpenSettings) {
-                      onOpenSettings();
-                    } else {
-                      alert('请先在设置中配置 Remove.bg API Key');
-                    }
-                    return;
-                  }
-
                   // 获取图片 URL
                   const imageUrl = selectedObject?._element?.src || selectedObject?.getSrc?.();
                   if (!imageUrl) {
