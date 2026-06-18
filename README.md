@@ -36,7 +36,7 @@ npm run dev
 应用支持在设置弹窗中切换 AI 生图服务商预设：
 
 - **HiAPI**：默认端点 `https://api.hiapi.ai/v1/tasks`，默认模型 `gpt-image-2-beta`；模型下拉会从 HiAPI 模型接口刷新图片 task 模型，API Key 获取入口为 [https://www.hiapi.ai/zh/register?aff=NIWx](https://www.hiapi.ai/zh/register?aff=NIWx)
-- **即梦 API**：默认端点 `https://api.qiaomu.ai/jimeng-auth/v1/images/generations`，线上版由乔木服务端内置；模型可在设置里从 `jimeng-5.0`、`jimeng-4.6`、`jimeng-4.5`、`jimeng-4.1`、`jimeng-4.0`、`jimeng-3.1`、`jimeng-3.0` 下拉选择
+- **即梦 API**：线上 `ps.qiaomu.ai` 由乔木服务端内置；开源自部署不会获得乔木密钥，需要配置自己的服务端 Key，或切换到 HiAPI / Seedream / 自定义接口。模型可在设置里从 `jimeng-5.0`、`jimeng-4.6`、`jimeng-4.5`、`jimeng-4.1`、`jimeng-4.0`、`jimeng-3.1`、`jimeng-3.0` 下拉选择
 - **火山方舟 / Seedream**：保留现有 Seedream 兼容请求格式
 - **自定义兼容接口**：手动填写 Endpoint、Model ID、认证方式和请求格式
 
@@ -47,12 +47,24 @@ NEXT_PUBLIC_SITE_URL=https://ps.qiaomu.ai
 NEXT_PUBLIC_UMAMI_SRC=https://umami.qiaomu.ai/script.js
 NEXT_PUBLIC_UMAMI_WEBSITE_ID=your_umami_website_id
 
-AI_IMAGE_PROVIDER_ID=jimeng
+NEXT_PUBLIC_ENABLE_BUILT_IN_JIMENG=false
+
+AI_IMAGE_PROVIDER_ID=hiapi
 JIMENG_API_KEY=your_server_side_jimeng_key
 JIMENG_API_ENDPOINT=https://api.qiaomu.ai/jimeng-auth/v1/images/generations
+JIMENG_BUILT_IN_ENABLED=false
 JIMENG_MODEL_ID=jimeng-5.0
 JIMENG_AUTH_HEADER=x-api-key
 JIMENG_REQUEST_FORMAT=jimeng
+```
+
+如果你要在自己的部署里提供“服务端内置即梦”，需要同时显式开启前端入口和后端能力，并建议限制来源与频率：
+
+```bash
+NEXT_PUBLIC_ENABLE_BUILT_IN_JIMENG=true
+JIMENG_BUILT_IN_ENABLED=true
+AI_BUILTIN_IMAGE_ALLOWED_ORIGINS=https://your-domain.example.com
+AI_BUILTIN_IMAGE_RATE_LIMIT_PER_HOUR=20
 ```
 
 图片上传、AI 生成图转存、分享图和去背景结果会通过服务端七牛上传接口处理，需要配置：

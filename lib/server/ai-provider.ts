@@ -30,10 +30,14 @@ export interface ResolvedAIProviderConfig {
 }
 
 export function resolveAIProviderConfig(body: AIProviderRequestBody): ResolvedAIProviderConfig {
-  const providerId = resolveProviderId(body.providerId || process.env.AI_IMAGE_PROVIDER_ID);
+  const providerId = resolveAIProviderId(body);
   const preset = getAIProviderPreset(providerId);
   const providerEnv = getProviderEnvPrefix(providerId);
   const useBuiltInProvider = isBuiltInAIProvider(providerId) && !clean(body.apiKey);
+
+  if (useBuiltInProvider && !isServerBuiltInAIProviderEnabled(providerId)) {
+    throw new Error(`服务端未启用内置 ${preset.label}。开源自部署请配置自己的服务端 Key，或在设置中切换到 HiAPI / Seedream / 自定义接口。`);
+  }
 
   const apiKey = clean(
     useBuiltInProvider
@@ -104,6 +108,26 @@ export function resolveAIProviderConfig(body: AIProviderRequestBody): ResolvedAI
     authHeader,
     requestFormat,
   };
+}
+
+export function resolveAIProviderId(body: AIProviderRequestBody): AIProviderId {
+  return resolveProviderId(body.providerId || process.env.AI_IMAGE_PROVIDER_ID);
+}
+
+export function isServerOwnedAIProviderRequest(body: AIProviderRequestBody): boolean {
+  const providerId = resolveAIProviderId(body);
+  return isBuiltInAIProvider(providerId) && !clean(body.apiKey);
+}
+
+export function isServerBuiltInAIProviderEnabled(providerId: AIProviderId): boolean {
+  if (providerId === 'jimeng') {
+    return parseBoolean(
+      process.env.JIMENG_BUILT_IN_ENABLED ||
+        process.env.AI_BUILTIN_JIMENG_ENABLED ||
+        process.env.QIAOMU_BUILT_IN_JIMENG_ENABLED
+    );
+  }
+  return true;
 }
 
 export function buildAIHeaders(config: ResolvedAIProviderConfig): Record<string, string> {
@@ -236,6 +260,10 @@ export function extractImageUrl(result: unknown): string {
 
 function clean(value: string | undefined | null): string {
   return typeof value === 'string' ? value.trim() : '';
+}
+
+function parseBoolean(value: string | undefined | null): boolean {
+  return ['1', 'true', 'yes', 'on'].includes(clean(value).toLowerCase());
 }
 
 function resolveProviderId(value: string | undefined): AIProviderId {

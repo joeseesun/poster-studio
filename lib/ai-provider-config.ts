@@ -32,7 +32,8 @@ export const AI_PROVIDER_STORAGE_KEYS = {
   requestFormat: 'ai_request_format',
 } as const;
 
-export const DEFAULT_AI_PROVIDER_ID: AIProviderId = 'jimeng';
+export const DEFAULT_AI_PROVIDER_ID: AIProviderId =
+  process.env.NEXT_PUBLIC_ENABLE_BUILT_IN_JIMENG === 'true' ? 'jimeng' : 'hiapi';
 
 export const JIMENG_MODEL_OPTIONS: AIModelOption[] = [
   {
@@ -152,7 +153,7 @@ export const AI_PROVIDER_PRESETS: AIProviderPreset[] = [
   {
     id: 'jimeng',
     label: '即梦 API',
-    description: '乔木内置免费服务，默认使用 jimeng-5.0。',
+    description: '服务端内置即梦能力，默认使用 jimeng-5.0。',
     endpoint: 'https://api.qiaomu.ai/jimeng-auth/v1/images/generations',
     modelId: 'jimeng-5.0',
     modelOptions: JIMENG_MODEL_OPTIONS,
@@ -225,6 +226,23 @@ export function getAIProviderPreset(providerId?: string | null): AIProviderPrese
 export function isBuiltInAIProvider(providerId?: string | null): boolean {
   const preset = getAIProviderPreset(isAIProviderId(providerId) ? providerId : DEFAULT_AI_PROVIDER_ID);
   return preset.builtIn === true;
+}
+
+export function isBuiltInAIProviderEnabled(providerId?: string | null): boolean {
+  const preset = getAIProviderPreset(isAIProviderId(providerId) ? providerId : DEFAULT_AI_PROVIDER_ID);
+  if (!preset.builtIn) return true;
+  if (preset.id === 'jimeng') {
+    return process.env.NEXT_PUBLIC_ENABLE_BUILT_IN_JIMENG === 'true';
+  }
+  return true;
+}
+
+export function resolveBrowserAIProviderId(value?: string | null): AIProviderId {
+  const providerId = isAIProviderId(value) ? value : DEFAULT_AI_PROVIDER_ID;
+  if (isBuiltInAIProvider(providerId) && !isBuiltInAIProviderEnabled(providerId)) {
+    return DEFAULT_AI_PROVIDER_ID;
+  }
+  return providerId;
 }
 
 export function isAIProviderModelId(providerId: AIProviderId, modelId?: string | null): boolean {

@@ -1,9 +1,8 @@
 import {
   AI_PROVIDER_STORAGE_KEYS,
-  DEFAULT_AI_PROVIDER_ID,
-  isAIProviderId,
   isAIProviderModelId,
   isBuiltInAIProvider,
+  resolveBrowserAIProviderId,
 } from './ai-provider-config';
 import { createAndPollAIImageJob } from './ai-image-job-client';
 
@@ -15,8 +14,7 @@ export class AIImageGenerator {
   private getConfig() {
     if (typeof window === 'undefined') return {};
 
-    const savedProviderId = localStorage.getItem(AI_PROVIDER_STORAGE_KEYS.providerId);
-    const providerId = isAIProviderId(savedProviderId) ? savedProviderId : DEFAULT_AI_PROVIDER_ID;
+    const providerId = resolveBrowserAIProviderId(localStorage.getItem(AI_PROVIDER_STORAGE_KEYS.providerId));
 
     if (isBuiltInAIProvider(providerId)) {
       const savedModelId = localStorage.getItem(AI_PROVIDER_STORAGE_KEYS.modelId);
