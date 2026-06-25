@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { fabric } from 'fabric';
+import * as fabric from 'fabric';
 import { PRESET_TEMPLATES } from '@/lib/preset-templates';
 
 export default function GenerateThumbnailsPage() {
@@ -26,8 +26,7 @@ export default function GenerateThumbnailsPage() {
         offscreenCanvas.height = height;
 
         const fabricCanvas = new fabric.Canvas(offscreenCanvas);
-        fabricCanvas.setWidth(width);
-        fabricCanvas.setHeight(height);
+        fabricCanvas.setDimensions({ width, height });
 
         // 背景色映射
         const backgroundColorMap: Record<string, string> = {
@@ -49,49 +48,44 @@ export default function GenerateThumbnailsPage() {
         // 加载 JSON
         const canvasData = JSON.parse(template.canvasJSON);
 
-        await new Promise<void>((resolve) => {
-          fabricCanvas.loadFromJSON(canvasData, () => {
-            fabricCanvas.setBackgroundColor(backgroundColor, () => {
-              fabricCanvas.renderAll();
+        await fabricCanvas.loadFromJSON(canvasData);
+        fabricCanvas.backgroundColor = backgroundColor;
+        fabricCanvas.renderAll();
 
-              // 生成缩略图
-              const dataURL = fabricCanvas.toDataURL({
-                format: 'png',
-                quality: 0.8,
-                multiplier: 0.2,
-              });
-
-              results.push({
-                name: template.name,
-                url: dataURL,
-                size: dataURL.length,
-              });
-
-              setProgress(prev => [...prev, `✅ 生成完成: ${template.name} (${(dataURL.length / 1024).toFixed(2)} KB)`]);
-
-              // 🆕 自动保存到服务器
-              fetch('/api/save-thumbnail', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: template.name, dataURL }),
-              })
-                .then(res => res.json())
-                .then(data => {
-                  if (data.success) {
-                    setProgress(prev => [...prev, `💾 已保存到服务器: ${data.fileName}`]);
-                  } else {
-                    setProgress(prev => [...prev, `❌ 保存失败: ${template.name}`]);
-                  }
-                })
-                .catch(err => {
-                  setProgress(prev => [...prev, `❌ 保存失败: ${template.name} - ${err.message}`]);
-                });
-
-              fabricCanvas.dispose();
-              resolve();
-            });
-          });
+        // 生成缩略图
+        const dataURL = fabricCanvas.toDataURL({
+          format: 'png',
+          quality: 0.8,
+          multiplier: 0.2,
         });
+
+        results.push({
+          name: template.name,
+          url: dataURL,
+          size: dataURL.length,
+        });
+
+        setProgress(prev => [...prev, `✅ 生成完成: ${template.name} (${(dataURL.length / 1024).toFixed(2)} KB)`]);
+
+        // 🆕 自动保存到服务器
+        fetch('/api/save-thumbnail', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: template.name, dataURL }),
+        })
+          .then(res => res.json())
+          .then(data => {
+            if (data.success) {
+              setProgress(prev => [...prev, `💾 已保存到服务器: ${data.fileName}`]);
+            } else {
+              setProgress(prev => [...prev, `❌ 保存失败: ${template.name}`]);
+            }
+          })
+          .catch(err => {
+            setProgress(prev => [...prev, `❌ 保存失败: ${template.name} - ${err.message}`]);
+          });
+
+        fabricCanvas.dispose();
       } catch (error) {
         setProgress(prev => [...prev, `❌ 失败: ${template.name} - ${error}`]);
       }
