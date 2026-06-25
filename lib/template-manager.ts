@@ -3,7 +3,7 @@
  * 负责模板的增删改查、应用模板、保存模板等功能
  */
 
-import { fabric } from 'fabric';
+import * as fabric from 'fabric';
 
 // 模板类型定义
 export interface Template {
@@ -184,8 +184,7 @@ export class TemplateManager {
         console.log('✅ 画布已清空');
 
         // 设置画布尺寸
-        canvas.setWidth(template.canvasSize.width);
-        canvas.setHeight(template.canvasSize.height);
+        canvas.setDimensions(template.canvasSize);
         console.log('✅ 画布尺寸已设置:', template.canvasSize);
 
         // 加载模板 JSON
@@ -242,14 +241,13 @@ export class TemplateManager {
           }
         }
 
-        canvas.loadFromJSON(canvasData, () => {
+        canvas.loadFromJSON(canvasData).then(() => {
           console.log('✅ JSON 加载完成');
 
           // 🆕 设置画布背景色（在 loadFromJSON 之后，避免被重置）
-          canvas.setBackgroundColor(backgroundColor, () => {
-            console.log('✅ 画布背景色已设置:', backgroundColor);
-            canvas.renderAll();
-          });
+          canvas.backgroundColor = backgroundColor;
+          console.log('✅ 画布背景色已设置:', backgroundColor);
+          canvas.renderAll();
 
           // 🆕 修复加载后的对象，确保所有必要属性都存在
           const objects = canvas.getObjects();
@@ -299,7 +297,7 @@ export class TemplateManager {
               resolve();
             });
           });
-        });
+        }).catch(reject);
       } catch (error) {
         console.error('❌ 应用模板失败:', error);
         reject(error);
@@ -347,8 +345,7 @@ export class TemplateManager {
         console.log('✅ 离屏 canvas 创建成功');
 
         const fabricCanvas = new fabric.Canvas(offscreenCanvas);
-        fabricCanvas.setWidth(width);
-        fabricCanvas.setHeight(height);
+        fabricCanvas.setDimensions({ width, height });
         console.log('✅ Fabric canvas 初始化成功');
 
         // 加载 JSON
@@ -378,28 +375,30 @@ export class TemplateManager {
         const backgroundColor = templateName ? (backgroundColorMap[templateName] || '#ffffff') : '#ffffff';
         console.log('🎨 背景色:', backgroundColor);
 
-        fabricCanvas.loadFromJSON(canvasData, () => {
+        fabricCanvas.loadFromJSON(canvasData).then(() => {
           console.log('✅ loadFromJSON 完成');
 
           // 设置背景色
-          fabricCanvas.setBackgroundColor(backgroundColor, () => {
-            console.log('✅ 背景色设置完成');
-            fabricCanvas.renderAll();
-            console.log('✅ 渲染完成');
+          fabricCanvas.backgroundColor = backgroundColor;
+          console.log('✅ 背景色设置完成');
+          fabricCanvas.renderAll();
+          console.log('✅ 渲染完成');
 
-            // 生成缩略图
-            const thumbnail = fabricCanvas.toDataURL({
-              format: 'png',
-              quality: 0.8,
-              multiplier: 0.2,
-            });
-
-            console.log('✅ 缩略图生成成功，长度:', thumbnail.length, '前50字符:', thumbnail.substring(0, 50));
-
-            // 清理
-            fabricCanvas.dispose();
-            resolve(thumbnail);
+          // 生成缩略图
+          const thumbnail = fabricCanvas.toDataURL({
+            format: 'png',
+            quality: 0.8,
+            multiplier: 0.2,
           });
+
+          console.log('✅ 缩略图生成成功，长度:', thumbnail.length, '前50字符:', thumbnail.substring(0, 50));
+
+          // 清理
+          fabricCanvas.dispose();
+          resolve(thumbnail);
+        }).catch((error) => {
+          console.error('❌ 从 JSON 生成缩略图失败:', error);
+          resolve('');
         });
       } catch (error) {
         console.error('❌ 从 JSON 生成缩略图失败:', error);

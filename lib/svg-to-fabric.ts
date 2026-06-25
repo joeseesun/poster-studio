@@ -3,7 +3,7 @@
  * 将 Lucide 图标的 SVG 转换为 Fabric.js 对象
  */
 
-import { fabric } from 'fabric';
+import * as fabric from 'fabric';
 import { createElement } from 'react';
 import { createRoot } from 'react-dom/client';
 
@@ -70,40 +70,35 @@ export async function iconToSVGString(IconComponent: any, size: number = 24): Pr
 /**
  * 将 SVG 字符串转换为 Fabric.js 对象
  */
-export function svgStringToFabric(
+export async function svgStringToFabric(
   svgString: string,
   options: SVGToFabricOptions = {}
 ): Promise<fabric.Group | fabric.Path> {
-  return new Promise((resolve, reject) => {
-    try {
-      // 使用 fabric.loadSVGFromString 解析 SVG
-      fabric.loadSVGFromString(svgString, (objects, opts) => {
-        if (!objects || objects.length === 0) {
-          reject(new Error('Failed to parse SVG'));
-          return;
-        }
-
-        // 如果只有一个对象，直接返回
-        if (objects.length === 1) {
-          const obj = objects[0];
-          applyOptions(obj, options);
-          resolve(obj as fabric.Path);
-          return;
-        }
-
-        // 多个对象，创建 Group
-        const group = new fabric.Group(objects, {
-          left: options.left || 0,
-          top: options.top || 0,
-        });
-
-        applyOptions(group, options);
-        resolve(group);
-      });
-    } catch (error) {
-      reject(error);
+  try {
+    // 使用 fabric.loadSVGFromString 解析 SVG
+    const { objects } = await fabric.loadSVGFromString(svgString);
+    if (!objects || objects.length === 0) {
+      throw new Error('Failed to parse SVG');
     }
-  });
+
+    // 如果只有一个对象，直接返回
+    if (objects.length === 1) {
+      const obj = objects[0] as fabric.Path;
+      applyOptions(obj, options);
+      return obj;
+    }
+
+    // 多个对象，创建 Group
+    const group = new fabric.Group(objects as fabric.Object[], {
+      left: options.left || 0,
+      top: options.top || 0,
+    });
+
+    applyOptions(group, options);
+    return group;
+  } catch (error) {
+    throw error;
+  }
 }
 
 /**

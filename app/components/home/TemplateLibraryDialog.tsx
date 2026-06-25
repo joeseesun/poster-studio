@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Search, Trash2 } from 'lucide-react';
 import { getTemplateManager, Template, TemplateCategory } from '@/lib/template-manager';
 import { PRESET_TEMPLATES } from '@/lib/preset-templates';
-import { fabric } from 'fabric';
+import * as fabric from 'fabric';
 
 interface TemplateLibraryDialogProps {
   open: boolean;
@@ -92,8 +92,7 @@ export default function TemplateLibraryDialog({
         offscreenCanvas.height = height;
 
         const fabricCanvas = new fabric.Canvas(offscreenCanvas);
-        fabricCanvas.setWidth(width);
-        fabricCanvas.setHeight(height);
+        fabricCanvas.setDimensions({ width, height });
 
         // 背景色映射
         const backgroundColorMap: Record<string, string> = {
@@ -115,57 +114,52 @@ export default function TemplateLibraryDialog({
         // 加载 JSON 并生成缩略图
         const canvasData = JSON.parse(template.canvasJSON);
 
-        await new Promise<void>((resolve) => {
-          fabricCanvas.loadFromJSON(canvasData, () => {
-            fabricCanvas.setBackgroundColor(backgroundColor, () => {
-              fabricCanvas.renderAll();
+        await fabricCanvas.loadFromJSON(canvasData);
+        fabricCanvas.backgroundColor = backgroundColor;
+        fabricCanvas.renderAll();
 
-              // 生成缩略图
-              const dataURL = fabricCanvas.toDataURL({
-                format: 'png',
-                quality: 0.8,
-                multiplier: 0.2,
-              });
-
-              setGenerateProgress(prev => [...prev, `✅ 生成完成: ${template.name}`]);
-
-              // 保存到服务器
-              fetch('/api/save-thumbnail', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: template.name, dataURL }),
-              })
-                .then(res => res.json())
-                .then(data => {
-                  if (data.success) {
-                    setGenerateProgress(prev => [...prev, `💾 已保存: ${data.fileName}`]);
-
-                    // 🆕 更新 localStorage 中的模板缩略图 URL（添加时间戳强制刷新）
-                    const manager = getTemplateManager();
-                    const existingTemplate = manager.getAll().find(t => t.name === template.name);
-                    if (existingTemplate) {
-                      const fileName = template.name
-                        .replace(/·/g, '-')      // 中文间隔号 → 连字符
-                        .replace(/:/g, '-')      // 冒号 → 连字符（用于 16:9, 9:16 等比例）
-                        .replace(/\s+/g, '-')    // 空格 → 连字符
-                        .toLowerCase() + '.png';
-                      manager.update(existingTemplate.id, {
-                        thumbnail: `/templates/${fileName}?v=${Date.now()}`
-                      });
-                    }
-                  } else {
-                    setGenerateProgress(prev => [...prev, `❌ 保存失败: ${template.name}`]);
-                  }
-                })
-                .catch(err => {
-                  setGenerateProgress(prev => [...prev, `❌ 保存失败: ${err.message}`]);
-                });
-
-              fabricCanvas.dispose();
-              resolve();
-            });
-          });
+        // 生成缩略图
+        const dataURL = fabricCanvas.toDataURL({
+          format: 'png',
+          quality: 0.8,
+          multiplier: 0.2,
         });
+
+        setGenerateProgress(prev => [...prev, `✅ 生成完成: ${template.name}`]);
+
+        // 保存到服务器
+        fetch('/api/save-thumbnail', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: template.name, dataURL }),
+        })
+          .then(res => res.json())
+          .then(data => {
+            if (data.success) {
+              setGenerateProgress(prev => [...prev, `💾 已保存: ${data.fileName}`]);
+
+              // 🆕 更新 localStorage 中的模板缩略图 URL（添加时间戳强制刷新）
+              const manager = getTemplateManager();
+              const existingTemplate = manager.getAll().find(t => t.name === template.name);
+              if (existingTemplate) {
+                const fileName = template.name
+                  .replace(/·/g, '-')      // 中文间隔号 → 连字符
+                  .replace(/:/g, '-')      // 冒号 → 连字符（用于 16:9, 9:16 等比例）
+                  .replace(/\s+/g, '-')    // 空格 → 连字符
+                  .toLowerCase() + '.png';
+                manager.update(existingTemplate.id, {
+                  thumbnail: `/templates/${fileName}?v=${Date.now()}`
+                });
+              }
+            } else {
+              setGenerateProgress(prev => [...prev, `❌ 保存失败: ${template.name}`]);
+            }
+          })
+          .catch(err => {
+            setGenerateProgress(prev => [...prev, `❌ 保存失败: ${err.message}`]);
+          });
+
+        fabricCanvas.dispose();
       } catch (error) {
         setGenerateProgress(prev => [...prev, `❌ 失败: ${template.name} - ${error}`]);
       }

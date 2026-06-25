@@ -1,9 +1,12 @@
 // 画布管理器
-import { fabric } from 'fabric';
+import * as fabric from 'fabric';
 import { HighlightConfig, CANVAS_WIDTH, CANVAS_HEIGHT } from './types';
 import { QiniuUploader } from './qiniu-uploader';
 import { getImageLibrary } from './image-library';
 import { iconComponentToFabric } from './svg-to-fabric';
+
+fabric.FabricObject.customProperties = ['data', 'selectable', 'evented'];
+fabric.Group.customProperties = ['data', 'selectable', 'evented'];
 
 export class CanvasManager {
   canvas: fabric.Canvas;
@@ -158,8 +161,7 @@ export class CanvasManager {
       // 如果点击的是文本对象（即使文本在图片上），不触发图片裁剪
       if (target && target.type === 'image' && !this.isCropping) {
         // 检查是否点击在文本对象上
-        const pointer = this.canvas.getPointer(e.e);
-        const clickedObject = this.canvas.findTarget(e.e as any, false);
+        const clickedObject = this.canvas.findTarget(e.e as any).target;
 
         // 如果点击的对象是文本类型，不进入裁剪模式
         if (clickedObject && (clickedObject.type === 'i-text' || clickedObject.type === 'textbox')) {
@@ -496,156 +498,143 @@ export class CanvasManager {
     });
   }
 
+  private async loadFabricImage(imageUrl: string): Promise<fabric.Image> {
+    const img = await fabric.Image.fromURL(imageUrl, { crossOrigin: 'anonymous' });
+    if (!img) {
+      throw new Error('Failed to load image');
+    }
+    return img;
+  }
+
   // 添加图片（上传到七牛云）
-  addImage(file: File): Promise<fabric.Image> {
-    return new Promise(async (resolve, reject) => {
-      try {
-        console.log('📤 开始上传图片到七牛云...');
+  async addImage(file: File): Promise<fabric.Image> {
+    try {
+      console.log('📤 开始上传图片到七牛云...');
 
-        // 上传到七牛云
-        const imageUrl = await this.qiniuUploader.uploadFile(file);
+      // 上传到七牛云
+      const imageUrl = await this.qiniuUploader.uploadFile(file);
 
-        console.log('✅ 图片上传成功，URL:', imageUrl);
+      console.log('✅ 图片上传成功，URL:', imageUrl);
 
-        // 添加到图片库
-        const library = getImageLibrary();
-        library.addImage(imageUrl, file.name);
+      // 添加到图片库
+      const library = getImageLibrary();
+      library.addImage(imageUrl, file.name);
 
-        // 从七牛云 URL 加载图片
-        fabric.Image.fromURL(imageUrl, (img) => {
-          if (!img) {
-            reject(new Error('Failed to load image from Qiniu'));
-            return;
-          }
+      // 从七牛云 URL 加载图片
+      const img = await this.loadFabricImage(imageUrl);
 
-          // 计算缩放比例，确保图片不超过画布的 80%
-          const maxWidth = this.width * 0.8;
-          const maxHeight = this.height * 0.8;
-          const scale = Math.min(
-            maxWidth / (img.width || 1),
-            maxHeight / (img.height || 1),
-            1 // 不放大，只缩小
-          );
+      // 计算缩放比例，确保图片不超过画布的 80%
+      const maxWidth = this.width * 0.8;
+      const maxHeight = this.height * 0.8;
+      const scale = Math.min(
+        maxWidth / (img.width || 1),
+        maxHeight / (img.height || 1),
+        1 // 不放大，只缩小
+      );
 
-          img.set({
-            left: this.width / 2,
-            top: this.height / 2,
-            originX: 'center',
-            originY: 'center',
-            scaleX: scale,
-            scaleY: scale,
-          });
+      img.set({
+        left: this.width / 2,
+        top: this.height / 2,
+        originX: 'center',
+        originY: 'center',
+        scaleX: scale,
+        scaleY: scale,
+      });
 
-          this.canvas.add(img);
-          this.canvas.setActiveObject(img);
-          this.canvas.renderAll();
-          resolve(img);
-        }, { crossOrigin: 'anonymous' }); // 允许跨域
-      } catch (error) {
-        console.error('❌ 图片上传失败:', error);
-        reject(error);
-      }
-    });
+      this.canvas.add(img);
+      this.canvas.setActiveObject(img);
+      this.canvas.renderAll();
+      return img;
+    } catch (error) {
+      console.error('❌ 图片上传失败:', error);
+      throw error;
+    }
   }
 
   // 从剪贴板添加图片（上传到七牛云）
-  addImageFromClipboard(blob: Blob): Promise<fabric.Image> {
-    return new Promise(async (resolve, reject) => {
-      try {
-        console.log('📤 开始上传剪贴板图片到七牛云...');
+  async addImageFromClipboard(blob: Blob): Promise<fabric.Image> {
+    try {
+      console.log('📤 开始上传剪贴板图片到七牛云...');
 
-        // 上传到七牛云
-        const imageUrl = await this.qiniuUploader.uploadBlob(blob);
+      // 上传到七牛云
+      const imageUrl = await this.qiniuUploader.uploadBlob(blob);
 
-        console.log('✅ 剪贴板图片上传成功，URL:', imageUrl);
+      console.log('✅ 剪贴板图片上传成功，URL:', imageUrl);
 
-        // 添加到图片库
-        const library = getImageLibrary();
-        library.addImage(imageUrl, `clipboard-${Date.now()}.png`);
+      // 添加到图片库
+      const library = getImageLibrary();
+      library.addImage(imageUrl, `clipboard-${Date.now()}.png`);
 
-        // 从七牛云 URL 加载图片
-        fabric.Image.fromURL(imageUrl, (img) => {
-          if (!img) {
-            reject(new Error('Failed to load image from Qiniu'));
-            return;
-          }
+      // 从七牛云 URL 加载图片
+      const img = await this.loadFabricImage(imageUrl);
 
-          // 计算缩放比例
-          const maxWidth = this.width * 0.8;
-          const maxHeight = this.height * 0.8;
-          const scale = Math.min(
-            maxWidth / (img.width || 1),
-            maxHeight / (img.height || 1),
-            1
-          );
+      // 计算缩放比例
+      const maxWidth = this.width * 0.8;
+      const maxHeight = this.height * 0.8;
+      const scale = Math.min(
+        maxWidth / (img.width || 1),
+        maxHeight / (img.height || 1),
+        1
+      );
 
-          img.set({
-            left: this.width / 2,
-            top: this.height / 2,
-            originX: 'center',
-            originY: 'center',
-            scaleX: scale,
-            scaleY: scale,
-          });
+      img.set({
+        left: this.width / 2,
+        top: this.height / 2,
+        originX: 'center',
+        originY: 'center',
+        scaleX: scale,
+        scaleY: scale,
+      });
 
-          this.canvas.add(img);
-          this.canvas.setActiveObject(img);
-          this.canvas.renderAll();
-          resolve(img);
-        }, { crossOrigin: 'anonymous' }); // 允许跨域
-      } catch (error) {
-        console.error('❌ 剪贴板图片上传失败:', error);
-        reject(error);
-      }
-    });
+      this.canvas.add(img);
+      this.canvas.setActiveObject(img);
+      this.canvas.renderAll();
+      return img;
+    } catch (error) {
+      console.error('❌ 剪贴板图片上传失败:', error);
+      throw error;
+    }
   }
 
   // 从 URL 添加图片（用于 AI 生图）
-  addImageFromURL(imageUrl: string, saveToLibrary = true): Promise<fabric.Image> {
-    return new Promise((resolve, reject) => {
-      console.log('📥 从 URL 加载图片:', imageUrl);
+  async addImageFromURL(imageUrl: string, saveToLibrary = true): Promise<fabric.Image> {
+    console.log('📥 从 URL 加载图片:', imageUrl);
 
-      fabric.Image.fromURL(imageUrl, (img) => {
-        if (!img) {
-          reject(new Error('Failed to load image from URL'));
-          return;
-        }
+    const img = await this.loadFabricImage(imageUrl);
 
-        // 计算缩放比例
-        const maxWidth = this.width * 0.8;
-        const maxHeight = this.height * 0.8;
-        const scale = Math.min(
-          maxWidth / (img.width || 1),
-          maxHeight / (img.height || 1),
-          1
-        );
+    // 计算缩放比例
+    const maxWidth = this.width * 0.8;
+    const maxHeight = this.height * 0.8;
+    const scale = Math.min(
+      maxWidth / (img.width || 1),
+      maxHeight / (img.height || 1),
+      1
+    );
 
-        img.set({
-          left: this.width / 2,
-          top: this.height / 2,
-          originX: 'center',
-          originY: 'center',
-          scaleX: scale,
-          scaleY: scale,
-        });
-
-        this.canvas.add(img);
-        this.canvas.setActiveObject(img);
-        this.canvas.renderAll();
-
-        // 保存到图片库
-        if (saveToLibrary) {
-          console.log('📚 准备保存到图库:', imageUrl);
-          const library = getImageLibrary();
-          const fileName = imageUrl.split('/').pop() || 'ai-generated.jpg';
-          const isNew = library.addImage(imageUrl, fileName);
-          console.log('✅ 图片已保存到图库:', fileName, '是否新图片:', isNew);
-          console.log('📚 当前图库数量:', library.getCount());
-        }
-
-        resolve(img);
-      }, { crossOrigin: 'anonymous' }); // 允许跨域
+    img.set({
+      left: this.width / 2,
+      top: this.height / 2,
+      originX: 'center',
+      originY: 'center',
+      scaleX: scale,
+      scaleY: scale,
     });
+
+    this.canvas.add(img);
+    this.canvas.setActiveObject(img);
+    this.canvas.renderAll();
+
+    // 保存到图片库
+    if (saveToLibrary) {
+      console.log('📚 准备保存到图库:', imageUrl);
+      const library = getImageLibrary();
+      const fileName = imageUrl.split('/').pop() || 'ai-generated.jpg';
+      const isNew = library.addImage(imageUrl, fileName);
+      console.log('✅ 图片已保存到图库:', fileName, '是否新图片:', isNew);
+      console.log('📚 当前图库数量:', library.getCount());
+    }
+
+    return img;
   }
 
   /**
@@ -915,57 +904,57 @@ export class CanvasManager {
    * @param imageUrl 真实图片URL
    */
   async replaceAIPlaceholder(placeholder: fabric.Group, imageUrl: string): Promise<void> {
-    return new Promise((resolve, reject) => {
+    try {
       // 获取占位图的位置和尺寸信息
       const left = placeholder.left || 0;
       const top = placeholder.top || 0;
       const targetSize = (placeholder as any).targetSize;
 
       // 加载真实图片
-      fabric.Image.fromURL(imageUrl, (img) => {
-        if (!img || !img.width || !img.height) {
-          console.error('❌ 加载图片失败');
-          reject(new Error('加载图片失败'));
-          return;
-        }
+      const img = await this.loadFabricImage(imageUrl);
+      if (!img.width || !img.height) {
+        console.error('❌ 加载图片失败');
+        throw new Error('加载图片失败');
+      }
 
-        // 计算缩放比例
-        const maxWidth = this.width * 0.8;
-        const maxHeight = this.height * 0.8;
-        const scale = Math.min(
-          maxWidth / (img.width || 1),
-          maxHeight / (img.height || 1),
-          1
-        );
+      // 计算缩放比例
+      const maxWidth = this.width * 0.8;
+      const maxHeight = this.height * 0.8;
+      const scale = Math.min(
+        maxWidth / (img.width || 1),
+        maxHeight / (img.height || 1),
+        1
+      );
 
-        // 设置图片属性（继承占位图的位置）
-        img.set({
-          left: left,
-          top: top,
-          originX: 'center',
-          originY: 'center',
-          scaleX: scale,
-          scaleY: scale,
-        });
+      // 设置图片属性（继承占位图的位置）
+      img.set({
+        left: left,
+        top: top,
+        originX: 'center',
+        originY: 'center',
+        scaleX: scale,
+        scaleY: scale,
+      });
 
-        // 移除占位图
-        this.canvas.remove(placeholder);
+      // 移除占位图
+      this.canvas.remove(placeholder);
 
-        // 添加真实图片
-        this.canvas.add(img);
-        this.canvas.setActiveObject(img);
-        this.canvas.renderAll();
+      // 添加真实图片
+      this.canvas.add(img);
+      this.canvas.setActiveObject(img);
+      this.canvas.renderAll();
 
-        // 保存到图片库
-        console.log('📚 准备保存到图库:', imageUrl);
-        const library = getImageLibrary();
-        const fileName = imageUrl.split('/').pop() || 'ai-generated.jpg';
-        const isNew = library.addImage(imageUrl, fileName);
-        console.log('✅ 图片已保存到图库:', fileName, '是否新图片:', isNew);
+      // 保存到图片库
+      console.log('📚 准备保存到图库:', imageUrl);
+      const library = getImageLibrary();
+      const fileName = imageUrl.split('/').pop() || 'ai-generated.jpg';
+      const isNew = library.addImage(imageUrl, fileName);
+      console.log('✅ 图片已保存到图库:', fileName, '是否新图片:', isNew);
 
-        resolve();
-      }, { crossOrigin: 'anonymous' });
-    });
+      void targetSize;
+    } catch (error) {
+      throw error;
+    }
   }
 
   /**
@@ -983,7 +972,7 @@ export class CanvasManager {
     const activeObject = this.canvas.getActiveObject();
     if (activeObject) {
       const beforeIndex = this.canvas.getObjects().indexOf(activeObject);
-      activeObject.bringToFront();
+      this.canvas.bringObjectToFront(activeObject);
       this.canvas.requestRenderAll();
       const afterIndex = this.canvas.getObjects().indexOf(activeObject);
       console.log('📌 置于顶层:', {
@@ -999,7 +988,7 @@ export class CanvasManager {
     const activeObject = this.canvas.getActiveObject();
     if (activeObject) {
       const beforeIndex = this.canvas.getObjects().indexOf(activeObject);
-      activeObject.sendToBack();
+      this.canvas.sendObjectToBack(activeObject);
       this.canvas.requestRenderAll();
       const afterIndex = this.canvas.getObjects().indexOf(activeObject);
       console.log('📌 置于底层:', {
@@ -1020,7 +1009,7 @@ export class CanvasManager {
     const activeObject = this.canvas.getActiveObject();
     if (activeObject) {
       const beforeIndex = this.canvas.getObjects().indexOf(activeObject);
-      activeObject.bringForward();
+      this.canvas.bringObjectForward(activeObject);
       this.canvas.requestRenderAll();
       const afterIndex = this.canvas.getObjects().indexOf(activeObject);
       console.log('📌 上移一层:', {
@@ -1035,7 +1024,7 @@ export class CanvasManager {
     const activeObject = this.canvas.getActiveObject();
     if (activeObject) {
       const beforeIndex = this.canvas.getObjects().indexOf(activeObject);
-      activeObject.sendBackwards();
+      this.canvas.sendObjectBackwards(activeObject);
       this.canvas.requestRenderAll();
       const afterIndex = this.canvas.getObjects().indexOf(activeObject);
       console.log('📌 下移一层:', {
@@ -1059,7 +1048,7 @@ export class CanvasManager {
   private tempShape: fabric.Object | null = null;
 
   // 复制选中的对象到剪贴板
-  copy() {
+  async copy() {
     const activeObject = this.canvas.getActiveObject();
     if (!activeObject) return;
 
@@ -1069,12 +1058,9 @@ export class CanvasManager {
       const objects = selection.getObjects();
 
       // 克隆所有对象到剪贴板
-      const clonedObjects: fabric.Object[] = [];
-      objects.forEach((obj: any) => {
-        obj.clone((cloned: fabric.Object) => {
-          clonedObjects.push(cloned);
-        }, ['data', 'selectable', 'evented']);
-      });
+      const clonedObjects = await Promise.all(
+        objects.map((obj: any) => obj.clone(['data', 'selectable', 'evented']) as Promise<fabric.Object>)
+      );
 
       this.clipboard = clonedObjects;
       console.log('✅ 已复制', clonedObjects.length, '个对象到剪贴板');
@@ -1082,10 +1068,9 @@ export class CanvasManager {
     }
 
     // 处理单个对象
-    activeObject.clone((cloned: fabric.Object) => {
-      this.clipboard = cloned;
-      console.log('✅ 已复制对象到剪贴板:', cloned.type);
-    }, ['data', 'selectable', 'evented']);
+    const cloned = await activeObject.clone(['data', 'selectable', 'evented']) as fabric.Object;
+    this.clipboard = cloned;
+    console.log('✅ 已复制对象到剪贴板:', cloned.type);
   }
 
   // 检查内部剪贴板是否有内容
@@ -1094,7 +1079,7 @@ export class CanvasManager {
   }
 
   // 从剪贴板粘贴对象
-  paste() {
+  async paste() {
     if (!this.clipboard) {
       console.log('⚠️ 剪贴板为空');
       return;
@@ -1105,49 +1090,47 @@ export class CanvasManager {
 
     // 处理多个对象
     if (Array.isArray(this.clipboard)) {
-      const pastedObjects: fabric.Object[] = [];
-
-      this.clipboard.forEach((obj: any) => {
-        obj.clone((cloned: fabric.Object) => {
+      const pastedObjects = await Promise.all(
+        this.clipboard.map(async (obj: any) => {
+          const cloned = await obj.clone(['data', 'selectable', 'evented']) as fabric.Object;
           cloned.set({
             left: (cloned.left || 0) + 20,
             top: (cloned.top || 0) + 20,
           });
           this.canvas.add(cloned);
-          pastedObjects.push(cloned);
-        }, ['data', 'selectable', 'evented']);
-      });
+          return cloned;
+        })
+      );
 
       // 选中粘贴的对象
-      setTimeout(() => {
+      if (pastedObjects.length > 0) {
         const sel = new fabric.ActiveSelection(pastedObjects, {
           canvas: this.canvas,
         });
         this.canvas.setActiveObject(sel);
         this.canvas.renderAll();
         console.log('✅ 已粘贴', pastedObjects.length, '个对象');
-      }, 10);
+      }
 
       return;
     }
 
     // 处理单个对象
-    this.clipboard.clone((cloned: fabric.Object) => {
-      cloned.set({
-        left: (cloned.left || 0) + 20,
-        top: (cloned.top || 0) + 20,
-      });
-      this.canvas.add(cloned);
-      this.canvas.setActiveObject(cloned);
-      this.canvas.renderAll();
+    const cloned = await this.clipboard.clone(['data', 'selectable', 'evented']) as fabric.Object;
+    cloned.set({
+      left: (cloned.left || 0) + 20,
+      top: (cloned.top || 0) + 20,
+    });
+    this.canvas.add(cloned);
+    this.canvas.setActiveObject(cloned);
+    this.canvas.renderAll();
 
-      // 如果是 Group，需要重新绑定事件
-      if (cloned.type === 'group') {
-        this.rebindGroupEvents();
-      }
+    // 如果是 Group，需要重新绑定事件
+    if (cloned.type === 'group') {
+      this.rebindGroupEvents();
+    }
 
-      console.log('✅ 已粘贴对象:', cloned.type);
-    }, ['data', 'selectable', 'evented']);
+    console.log('✅ 已粘贴对象:', cloned.type);
   }
 
   // 启用画笔模式
@@ -1313,13 +1296,14 @@ export class CanvasManager {
   private setupShapeDrawingEvents() {
     // 鼠标按下 - 开始绘制
     this.canvas.on('mouse:down', (e) => {
-      if (!this.shapeDrawingMode || !e.pointer) return;
+      if (!this.shapeDrawingMode) return;
+      const pointer = this.canvas.getScenePoint(e.e);
 
       this.isDrawingShape = true;
-      this.drawingStartPoint = { x: e.pointer.x, y: e.pointer.y };
+      this.drawingStartPoint = { x: pointer.x, y: pointer.y };
 
       // 创建临时形状
-      this.tempShape = this.createTempShape(this.shapeDrawingMode, e.pointer.x, e.pointer.y);
+      this.tempShape = this.createTempShape(this.shapeDrawingMode, pointer.x, pointer.y);
       if (this.tempShape) {
         this.canvas.add(this.tempShape);
       }
@@ -1327,14 +1311,15 @@ export class CanvasManager {
 
     // 鼠标移动 - 更新形状大小
     this.canvas.on('mouse:move', (e) => {
-      if (!this.isDrawingShape || !this.tempShape || !this.drawingStartPoint || !e.pointer) return;
+      if (!this.isDrawingShape || !this.tempShape || !this.drawingStartPoint) return;
 
-      this.updateTempShape(this.tempShape, this.shapeDrawingMode!, this.drawingStartPoint, e.pointer);
+      const pointer = this.canvas.getScenePoint(e.e);
+      this.updateTempShape(this.tempShape, this.shapeDrawingMode!, this.drawingStartPoint, pointer);
       this.canvas.renderAll();
     });
 
     // 鼠标松开 - 完成绘制
-    this.canvas.on('mouse:up', (e) => {
+    this.canvas.on('mouse:up', () => {
       if (!this.isDrawingShape || !this.tempShape) return;
 
       this.isDrawingShape = false;
@@ -1545,7 +1530,7 @@ export class CanvasManager {
   }
 
   // 复制选中的对象(原地复制,Cmd+D)
-  duplicateActive() {
+  async duplicateActive() {
     const activeObject = this.canvas.getActiveObject();
     if (!activeObject) return;
 
@@ -1558,45 +1543,44 @@ export class CanvasManager {
       this.canvas.discardActiveObject();
 
       // 复制每个对象
-      const clonedObjects: fabric.Object[] = [];
-      objects.forEach((obj: any) => {
-        obj.clone((cloned: fabric.Object) => {
+      const clonedObjects = await Promise.all(
+        objects.map(async (obj: any) => {
+          const cloned = await obj.clone(['data', 'selectable', 'evented']) as fabric.Object;
           cloned.set({
             left: (cloned.left || 0) + 20,
             top: (cloned.top || 0) + 20,
           });
           this.canvas.add(cloned);
-          clonedObjects.push(cloned);
-        }, ['data', 'selectable', 'evented']);
-      });
+          return cloned;
+        })
+      );
 
       // 选中复制的对象
-      setTimeout(() => {
+      if (clonedObjects.length > 0) {
         const sel = new fabric.ActiveSelection(clonedObjects, {
           canvas: this.canvas,
         });
         this.canvas.setActiveObject(sel);
         this.canvas.renderAll();
-      }, 10);
+      }
 
       return;
     }
 
     // 处理单个对象
-    activeObject.clone((cloned: fabric.Object) => {
-      cloned.set({
-        left: (cloned.left || 0) + 20,
-        top: (cloned.top || 0) + 20,
-      });
-      this.canvas.add(cloned);
-      this.canvas.setActiveObject(cloned);
-      this.canvas.renderAll();
+    const cloned = await activeObject.clone(['data', 'selectable', 'evented']) as fabric.Object;
+    cloned.set({
+      left: (cloned.left || 0) + 20,
+      top: (cloned.top || 0) + 20,
+    });
+    this.canvas.add(cloned);
+    this.canvas.setActiveObject(cloned);
+    this.canvas.renderAll();
 
-      // 如果是 Group，需要重新绑定事件
-      if (cloned.type === 'group') {
-        this.rebindGroupEvents();
-      }
-    }, ['data', 'selectable', 'evented']);
+    // 如果是 Group，需要重新绑定事件
+    if (cloned.type === 'group') {
+      this.rebindGroupEvents();
+    }
   }
 
   // 更新现有高亮文本的背景色
@@ -1771,8 +1755,8 @@ export class CanvasManager {
       originX: 'center',
       originY: 'center',
       subTargetCheck: true, // 允许选中子对象
-      data: { isDecoratedText: true }, // ✅ 标记为新的装饰文本，避免被迁移
     });
+    (group as any).data = { isDecoratedText: true }; // ✅ 标记为新的装饰文本，避免被迁移
 
     // 监听双击事件，进入文本编辑模式
     group.on('mousedblclick', () => {
@@ -2009,16 +1993,14 @@ export class CanvasManager {
 
   // 设置背景色
   setBackgroundColor(color: string) {
-    // 清除背景图片
-    this.canvas.setBackgroundImage(null as any, () => {
-      // 设置纯色背景
-      this.canvas.setBackgroundColor(color, () => this.canvas.renderAll());
-    });
+    this.canvas.backgroundImage = undefined;
+    this.canvas.backgroundColor = color;
+    this.canvas.renderAll();
   }
 
   // 设置渐变背景
   setBackgroundGradient(gradientCSS: string) {
-    let gradient: fabric.Gradient | null = null;
+    let gradient: fabric.Gradient<'linear' | 'radial'> | null = null;
 
     // 尝试解析线性渐变
     // 例如: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
@@ -2075,11 +2057,9 @@ export class CanvasManager {
     }
 
     if (gradient) {
-      // 清除背景图片
-      this.canvas.setBackgroundImage(null as any, () => {
-        // 设置渐变背景
-        this.canvas.setBackgroundColor(gradient as any, () => this.canvas.renderAll());
-      });
+      this.canvas.backgroundImage = undefined;
+      this.canvas.backgroundColor = gradient as any;
+      this.canvas.renderAll();
     }
   }
 
@@ -2104,8 +2084,9 @@ export class CanvasManager {
   }
 
   // 设置图片背景
-  setBackgroundImage(imageUrl: string) {
-    fabric.Image.fromURL(imageUrl, (img) => {
+  async setBackgroundImage(imageUrl: string) {
+    try {
+      const img = await this.loadFabricImage(imageUrl);
       // 计算缩放比例以填满画布
       const scaleX = this.width / (img.width || 1);
       const scaleY = this.height / (img.height || 1);
@@ -2120,8 +2101,11 @@ export class CanvasManager {
         top: this.height / 2,
       });
 
-      this.canvas.setBackgroundImage(img, () => this.canvas.renderAll());
-    });
+      this.canvas.backgroundImage = img;
+      this.canvas.renderAll();
+    } catch (error) {
+      console.error('❌ 设置背景图片失败:', error);
+    }
   }
 
   // 更新选中对象的属性
@@ -3203,7 +3187,7 @@ export class CanvasManager {
     const wasLoadingTemplate = this.isLoadingTemplate;
     this.isLoadingTemplate = true;
 
-    this.canvas.loadFromJSON(json, () => {
+    this.canvas.loadFromJSON(json).then(() => {
       // 加载完成后，重新绑定所有 Group 对象的双击事件
       this.rebindGroupEvents();
       this.canvas.renderAll();
@@ -3214,6 +3198,9 @@ export class CanvasManager {
         this.isLoadingTemplate = enableHistoryAfterLoad ? false : wasLoadingTemplate;
         console.log('✅ 画布加载完成, isLoadingTemplate =', this.isLoadingTemplate);
       }, 100);
+    }).catch((error) => {
+      console.error('❌ 从 JSON 加载画布失败:', error);
+      this.isLoadingTemplate = wasLoadingTemplate;
     });
   }
 
@@ -3684,15 +3671,15 @@ export class CanvasManager {
   // 清空画布
   clear() {
     this.canvas.clear();
-    this.canvas.setBackgroundColor('#ffffff', () => this.canvas.renderAll());
+    this.canvas.backgroundColor = '#ffffff';
+    this.canvas.renderAll();
   }
 
   // 调整画布尺寸，保留当前对象和事件绑定
   resize(width: number, height: number) {
     this.width = width;
     this.height = height;
-    this.canvas.setWidth(width);
-    this.canvas.setHeight(height);
+    this.canvas.setDimensions({ width, height });
     this.canvas.calcOffset();
     this.canvas.renderAll();
   }
@@ -3743,7 +3730,7 @@ export class CanvasManager {
         //   hasPath: obj.path !== undefined,
         // })));
 
-        canvasData = this.canvas.toJSON(['data', 'selectable', 'evented']);
+        canvasData = this.canvas.toJSON();
       } catch (innerError) {
         console.error('❌ canvas.toJSON() 内部错误:', innerError);
         console.error('Canvas 对象详情:', this.canvas.getObjects().map((obj: any) => ({
@@ -4073,7 +4060,7 @@ export class CanvasManager {
         offsetY: shadow.offsetY,
       });
     } else {
-      activeObj.shadow = undefined;
+      activeObj.shadow = null;
     }
 
     this.canvas.renderAll();
@@ -4122,14 +4109,14 @@ export class CanvasManager {
 
     // 快速滤镜（一键应用）
     const quickFilters: { [key: string]: any } = {
-      grayscale: new fabric.Image.filters.Grayscale(),
-      sepia: new fabric.Image.filters.Sepia(),
-      invert: new fabric.Image.filters.Invert(),
-      blur: new fabric.Image.filters.Blur({ blur: 0.3 }),
-      sharpen: new fabric.Image.filters.Convolute({
+      grayscale: new fabric.filters.Grayscale(),
+      sepia: new fabric.filters.Sepia(),
+      invert: new fabric.filters.Invert(),
+      blur: new fabric.filters.Blur({ blur: 0.3 }),
+      sharpen: new fabric.filters.Convolute({
         matrix: [0, -1, 0, -1, 5, -1, 0, -1, 0],
       }),
-      emboss: new fabric.Image.filters.Convolute({
+      emboss: new fabric.filters.Convolute({
         matrix: [1, 1, 1, 1, 0.7, -1, -1, -1, -1],
       }),
     };
@@ -4152,12 +4139,12 @@ export class CanvasManager {
 
     // 移除旧的亮度滤镜
     image.filters = (image.filters || []).filter(
-      (f: any) => !(f instanceof fabric.Image.filters.Brightness)
+      (f: any) => !(f instanceof fabric.filters.Brightness)
     );
 
     // 添加新的亮度滤镜
     if (value !== 0) {
-      image.filters?.push(new fabric.Image.filters.Brightness({ brightness: value }));
+      image.filters?.push(new fabric.filters.Brightness({ brightness: value }));
     }
 
     image.applyFilters();
@@ -4175,12 +4162,12 @@ export class CanvasManager {
 
     // 移除旧的对比度滤镜
     image.filters = (image.filters || []).filter(
-      (f: any) => !(f instanceof fabric.Image.filters.Contrast)
+      (f: any) => !(f instanceof fabric.filters.Contrast)
     );
 
     // 添加新的对比度滤镜
     if (value !== 0) {
-      image.filters?.push(new fabric.Image.filters.Contrast({ contrast: value }));
+      image.filters?.push(new fabric.filters.Contrast({ contrast: value }));
     }
 
     image.applyFilters();
@@ -4198,12 +4185,12 @@ export class CanvasManager {
 
     // 移除旧的饱和度滤镜
     image.filters = (image.filters || []).filter(
-      (f: any) => !(f instanceof fabric.Image.filters.Saturation)
+      (f: any) => !(f instanceof fabric.filters.Saturation)
     );
 
     // 添加新的饱和度滤镜
     if (value !== 0) {
-      image.filters?.push(new fabric.Image.filters.Saturation({ saturation: value }));
+      image.filters?.push(new fabric.filters.Saturation({ saturation: value }));
     }
 
     image.applyFilters();
@@ -4214,7 +4201,7 @@ export class CanvasManager {
    * 替换当前选中的图片
    */
   replaceSelectedImage(newImageUrl: string): Promise<void> {
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
       const activeObj = this.canvas.getActiveObject();
       if (!activeObj || activeObj.type !== 'image') {
         reject(new Error('没有选中的图片对象'));
@@ -4224,11 +4211,8 @@ export class CanvasManager {
       const oldImg = activeObj as fabric.Image;
 
       // 加载新图片
-      fabric.Image.fromURL(newImageUrl, (newImg) => {
-        if (!newImg) {
-          reject(new Error('加载新图片失败'));
-          return;
-        }
+      try {
+        const newImg = await this.loadFabricImage(newImageUrl);
 
         // 保持原图片的所有属性
         newImg.set({
@@ -4266,7 +4250,9 @@ export class CanvasManager {
 
         console.log('✅ 图片已替换');
         resolve();
-      });
+      } catch (error) {
+        reject(error);
+      }
     });
   }
 
@@ -4605,7 +4591,7 @@ export class CanvasManager {
   /**
    * 处理锁定图标的显示/隐藏
    */
-  private handleLockIconVisibility(e: fabric.IEvent): void {
+  private handleLockIconVisibility(e: { target?: fabric.Object }): void {
     // 先隐藏所有锁定图标
     this.hideAllLockIcons();
 

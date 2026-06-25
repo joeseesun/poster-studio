@@ -31,7 +31,7 @@ import ImagePropertiesPanel from './components/properties/ImagePropertiesPanel';
 import { getTemplateManager, TemplateCategory } from '@/lib/template-manager';
 import { IconConfig } from '@/lib/icon-library';
 import { updateSVGColor, updateSVGStrokeWidth } from '@/lib/svg-to-fabric';
-import { fabric } from 'fabric';
+import * as fabric from 'fabric';
 import { getImageLibrary } from '@/lib/image-library';
 import ShareDialog from './components/ShareDialog';
 import ShareMaterialDialog from './components/home/ShareMaterialDialog';
@@ -186,7 +186,7 @@ export default function Home() {
       }
 
       // 单选或无选择状态：查找点击的对象
-      const pointer = managerRef.current!.canvas.getPointer(e);
+      const pointer = managerRef.current!.canvas.getScenePoint(e);
       const allObjects = managerRef.current!.canvas.getObjects();
       let target = null;
 
@@ -888,8 +888,9 @@ export default function Home() {
     }
 
     // 获取点击位置的对象
-    const pointer = managerRef.current.canvas.getPointer(e.nativeEvent);
-    const target = managerRef.current.canvas.findTarget(e.nativeEvent as any, false);
+    const pointer = managerRef.current.canvas.getScenePoint(e.nativeEvent);
+    const targetInfo = managerRef.current.canvas.findTarget(e.nativeEvent as any);
+    const target = targetInfo.target;
 
     console.log('🖱️ 右键点击:', { target: target?.type, pointer, pageX: e.pageX, pageY: e.pageY });
 
@@ -1534,22 +1535,16 @@ export default function Home() {
         // 设置背景色（如果有）
         if (validTemplate.canvasJSON.includes('backgroundColor')) {
           const bgColor = canvasData.backgroundColor || '#ffffff';
-          managerRef.current.canvas.setBackgroundColor(bgColor, () => {
-            managerRef.current?.canvas.renderAll();
-          });
+          managerRef.current.canvas.backgroundColor = bgColor;
         }
 
         // 加载对象
-        await new Promise<void>((resolve) => {
-          managerRef.current!.canvas.loadFromJSON(canvasData, () => {
-            console.log('✅ 模板对象加载完成');
-            managerRef.current!.canvas.renderAll();
-            resolve();
-          }, (o: any, object: any) => {
-            // 对象加载回调
-            console.log('📦 加载对象:', object.type);
-          });
+        await managerRef.current!.canvas.loadFromJSON(canvasData, (o: any, object: any) => {
+          // 对象加载回调
+          console.log('📦 加载对象:', object?.type);
         });
+        console.log('✅ 模板对象加载完成');
+        managerRef.current!.canvas.renderAll();
 
         console.log('✅ 模板应用完成');
       } catch (error) {
