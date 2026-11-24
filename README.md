@@ -112,6 +112,7 @@ QINIU_STORAGE_PATH=xhs-cover
 
 UNSPLASH_ACCESS_KEY=
 REMOVE_BG_API_KEY=
+REMOVE_BG_API_URL=
 ```
 
 ### 分享 / 公开模板 / 公开素材

@@ -28,7 +28,8 @@ export async function POST(request: NextRequest) {
     formData.append('image_url', imageUrl);
     formData.append('size', 'auto');
 
-    const removeBgResponse = await fetch('https://api.remove.bg/v1.0/removebg', {
+    const apiUrl = clean(process.env.REMOVE_BG_API_URL) || 'https://api.remove.bg/v1.0/removebg';
+    const removeBgResponse = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'X-API-Key': resolvedApiKey,
